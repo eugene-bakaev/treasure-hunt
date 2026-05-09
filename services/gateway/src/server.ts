@@ -1,7 +1,8 @@
-import express, { type Express } from 'express';
+import express from 'express';
+import http from 'http';
 import type { HealthResponse } from '@treasure-hunt/protocol';
 
-export function createServer(): Express {
+export function createServer(): http.Server {
   const app = express();
   app.use(express.json());
 
@@ -10,5 +11,5 @@ export function createServer(): Express {
     res.status(200).json(body);
   });
 
-  return app;
+  return http.createServer(app);
 }
