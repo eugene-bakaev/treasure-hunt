@@ -1,10 +1,7 @@
 import type { ClientMessage, ServerMessage } from '@treasure-hunt/protocol';
 import { initFromServerMsg, applyDiff, useGameStore } from '../state/gameStore.js';
 
-const WS_URL =
-  (typeof import.meta !== 'undefined' && (import.meta as Record<string, unknown>)['env']
-    ? ((import.meta as { env: Record<string, string> }).env['VITE_WS_URL'])
-    : undefined) ?? 'ws://localhost:3000/ws';
+const WS_URL: string = (import.meta.env as Record<string, string | undefined>)['VITE_WS_URL'] ?? 'ws://localhost:3000/ws';
 
 let ws: WebSocket | null = null;
 
