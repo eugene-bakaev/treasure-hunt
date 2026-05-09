@@ -5,12 +5,16 @@ import { createMatch } from '../net/lobby.js';
 export default function Home() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleCreate() {
     setLoading(true);
+    setError(null);
     try {
       const { matchId, joinCode } = await createMatch();
       navigate(`/match/${matchId}`, { state: { joinCode } });
+    } catch {
+      setError('Failed to create match. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -37,6 +41,11 @@ export default function Home() {
       >
         {loading ? 'Creating…' : 'Create Match'}
       </button>
+      {error && (
+        <p style={{ color: '#f88', marginTop: '0.75rem', fontSize: '0.9rem' }}>
+          {error}
+        </p>
+      )}
     </main>
   );
 }

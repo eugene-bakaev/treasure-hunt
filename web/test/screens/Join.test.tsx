@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Join from '../../src/screens/Join.js';
 
 const mockNavigate = vi.fn();
@@ -12,6 +12,8 @@ vi.mock('react-router-dom', async (importOriginal) => {
 vi.mock('../../src/net/lobby.js', () => ({
   joinMatch: vi.fn().mockResolvedValue({ matchId: 'match-456' }),
 }));
+
+beforeEach(() => mockNavigate.mockClear());
 
 function renderJoin(joinCode: string) {
   return render(

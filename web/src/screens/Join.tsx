@@ -9,9 +9,11 @@ export default function Join() {
 
   useEffect(() => {
     if (!joinCode) return;
+    let mounted = true;
     joinMatch(joinCode)
-      .then(({ matchId }) => navigate(`/match/${matchId}`))
-      .catch(() => setError('Invalid or expired invite link.'));
+      .then(({ matchId }) => { if (mounted) navigate(`/match/${matchId}`); })
+      .catch(() => { if (mounted) setError('Invalid or expired invite link.'); });
+    return () => { mounted = false; };
   }, [joinCode, navigate]);
 
   if (error) {
