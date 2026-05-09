@@ -1,7 +1,27 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import App from '../src/App.js';
+
+vi.mock('../src/pixi/PixiCanvas.js', () => ({
+  default: () => <div data-testid="pixi-canvas" />,
+}));
+
+vi.mock('../src/net/socket.js', () => ({
+  connect: () => {},
+  disconnect: () => {},
+  sendIntent: () => {},
+}));
+
+vi.mock('../src/state/gameStore.js', () => ({
+  useGameStore: () => ({
+    detector: 50,
+    score: 0,
+    matchEnded: false,
+    winnerId: null,
+    playerId: 'test-player',
+  }),
+}));
 
 function renderAt(path: string) {
   return render(
@@ -24,6 +44,6 @@ describe('App routing', () => {
 
   it('renders Match at /match/:id', () => {
     renderAt('/match/abc-123');
-    expect(screen.getByText(/match abc-123/i)).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 });
