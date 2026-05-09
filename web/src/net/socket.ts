@@ -1,14 +1,16 @@
 import type { ClientMessage, ServerMessage } from '@treasure-hunt/protocol';
 import { initFromServerMsg, applyDiff, useGameStore } from '../state/gameStore.js';
 
-const WS_URL: string = (import.meta.env as Record<string, string | undefined>)['VITE_WS_URL'] ?? 'ws://localhost:3000/ws';
+const WS_BASE: string =
+  (import.meta.env as Record<string, string | undefined>)['VITE_WS_URL'] ??
+  'ws://localhost:3000/ws';
 
 let ws: WebSocket | null = null;
 
-export function connect(): void {
+export function connect(matchId: string): void {
   if (ws && ws.readyState !== WebSocket.CLOSED) return;
 
-  const socket = new WebSocket(WS_URL);
+  const socket = new WebSocket(`${WS_BASE}?matchId=${encodeURIComponent(matchId)}`);
   ws = socket;
 
   socket.onmessage = (event: MessageEvent<string>) => {
@@ -26,8 +28,6 @@ export function connect(): void {
     }
   };
 
-  // Guard against stale closures overwriting a newer socket assigned by a
-  // subsequent connect() call (e.g. React 18 StrictMode double-invoke).
   socket.onerror = () => {
     if (ws === socket) ws = null;
   };
@@ -46,4 +46,5 @@ export function sendIntent(intent: ClientMessage): void {
 export function disconnect(): void {
   ws?.close();
   ws = null;
+  useGameStore.setState({ playerId: null, matchId: null });
 }
