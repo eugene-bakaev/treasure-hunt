@@ -39,7 +39,6 @@ export function generateMap(seed: string): MapGrid {
 
   // Place treasure in a random rock cell at least MIN_TREASURE_DIST from spawn center
   let treasurePos: { x: number; y: number };
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const tx = Math.floor(rng() * MAP_WIDTH);
     const ty = Math.floor(rng() * MAP_HEIGHT);
