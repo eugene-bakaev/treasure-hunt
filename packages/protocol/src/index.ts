@@ -1,8 +1,12 @@
-// Phase 0 stub. Real WS message and event types arrive in Phase 1.
-
-export type ServiceName = 'gateway' | 'lobby' | 'game' | 'stats';
-
-export interface HealthResponse {
-  status: 'ok';
-  service: ServiceName;
-}
+export type { ServiceName, HealthResponse } from './service.js';
+export type {
+  Facing,
+  CellType,
+  ClientMessage,
+  CellChange,
+  PlayerSnapshot,
+  MatchEvent,
+  ServerMessage,
+  GatewayToGameMsg,
+  GameToGatewayMsg,
+} from './messages.js';
