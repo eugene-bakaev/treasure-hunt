@@ -18,4 +18,10 @@ describe('Scoreboard', () => {
     render(<Scoreboard nickname="Alice" score={100} matchEnded={true} isWinner={false} />);
     expect(screen.getByText('Game over')).toBeInTheDocument();
   });
+
+  it('shows no result text when match not ended', () => {
+    render(<Scoreboard nickname="Alice" score={10} />);
+    expect(screen.queryByText('You win!')).toBeNull();
+    expect(screen.queryByText('Game over')).toBeNull();
+  });
 });
