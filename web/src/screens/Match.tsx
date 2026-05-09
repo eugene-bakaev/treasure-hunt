@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import PixiCanvas from '../pixi/PixiCanvas.js';
 import DetectorGauge from '../hud/DetectorGauge.js';
 import Scoreboard from '../hud/Scoreboard.js';
@@ -11,6 +11,7 @@ import type { Facing } from '@treasure-hunt/protocol';
 export default function Match() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const detector = useGameStore((s) => s.detector);
   const score = useGameStore((s) => s.score);
@@ -19,7 +20,7 @@ export default function Match() {
   const playerId = useGameStore((s) => s.playerId);
 
   useEffect(() => {
-    connect();
+    connect(id!);
     return () => disconnect();
   }, [id]);
 
@@ -39,7 +40,41 @@ export default function Match() {
 
   useInput({ onMove, onStop, onDig });
 
-  const nickname = playerId ?? 'You';
+  const joinCode = (location.state as { joinCode?: string } | null)?.joinCode;
+  const inviteUrl = joinCode
+    ? `${window.location.origin}/join/${joinCode}`
+    : null;
+
+  if (playerId === null) {
+    return (
+      <main style={{ color: '#eee', padding: '2rem', textAlign: 'center', background: '#111', minHeight: '100vh' }}>
+        <h2>Waiting for opponent…</h2>
+        {inviteUrl && (
+          <>
+            <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#aaa' }}>
+              Share this link:
+            </p>
+            <code style={{
+              display: 'block', margin: '0.5rem auto', padding: '0.5rem 1rem',
+              background: '#222', borderRadius: '4px', maxWidth: '480px',
+              wordBreak: 'break-all', fontSize: '0.9rem',
+            }}>
+              {inviteUrl}
+            </code>
+            <button
+              onClick={() => { void navigator.clipboard.writeText(inviteUrl); }}
+              style={{
+                marginTop: '0.5rem', padding: '0.4rem 1rem', cursor: 'pointer',
+                background: '#444', color: '#eee', border: 'none', borderRadius: '4px',
+              }}
+            >
+              Copy
+            </button>
+          </>
+        )}
+      </main>
+    );
+  }
 
   return (
     <div
@@ -55,7 +90,7 @@ export default function Match() {
     >
       <div style={{ width: '640px' }}>
         <Scoreboard
-          nickname={nickname}
+          nickname={playerId}
           score={score}
           matchEnded={matchEnded}
           isWinner={matchEnded && winnerId === playerId}
