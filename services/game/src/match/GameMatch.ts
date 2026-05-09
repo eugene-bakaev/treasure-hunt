@@ -5,6 +5,7 @@ import type {
   MatchEvent,
   ServerMessage,
   GameToGatewayMsg,
+  ItemType,
 } from '@treasure-hunt/protocol';
 import { generateMap } from '../map/MapGenerator.js';
 import type { MapGrid } from '../map/types.js';
@@ -19,18 +20,13 @@ import {
 
 export type MatchEventEmitter = (msg: GameToGatewayMsg) => void;
 
-interface BuriedItem {
-  x: number;
-  y: number;
-  id: 'treasure';
-}
-
 export class GameMatch {
   private readonly matchId: string;
   private readonly map: MapGrid;
   private readonly players = new Map<string, PlayerState>();
   private readonly intentQueues = new Map<string, ClientMessage[]>();
-  private buriedItems: BuriedItem[];
+  private readonly buriedItems = new Map<string, ItemType>(); // "x,y" → item
+  private readonly groundItems = new Map<string, ItemType>(); // "x,y" → item
   private tick = 0;
   private ended = false;
   private emit: MatchEventEmitter;
@@ -40,7 +36,9 @@ export class GameMatch {
     this.matchId = matchId;
     this.map = generateMap(seed);
     this.emit = emit;
-    this.buriedItems = [{ ...this.map.treasurePos, id: 'treasure' }];
+    for (const { x, y, item } of this.map.items) {
+      this.buriedItems.set(`${x},${y}`, item);
+    }
   }
 
   addPlayer(playerId: string): void {
@@ -56,6 +54,7 @@ export class GameMatch {
       digTarget: null,
       digTicksRemaining: 0,
       score: 0,
+      heldPowerup: null,
     });
     this.intentQueues.set(playerId, []);
 
@@ -117,6 +116,12 @@ export class GameMatch {
     const cellsChanged: CellChange[] = [];
     const events: MatchEvent[] = [];
 
+    // Snapshot ground items at the start of the tick (before pickups modify the map)
+    const groundItemsArray = [...this.groundItems.entries()].map(([key, item]) => {
+      const [xs, ys] = key.split(',');
+      return { x: Number(xs), y: Number(ys), item };
+    });
+
     for (const [playerId, player] of this.players) {
       const queue = this.intentQueues.get(playerId) ?? [];
       this.intentQueues.set(playerId, []);
@@ -140,23 +145,34 @@ export class GameMatch {
       // Resolve completed dig
       if (isDugComplete(state) && state.digTarget) {
         const { x: tx, y: ty } = state.digTarget;
+        const buriedKey = `${tx},${ty}`;
         this.map.cells[ty]![tx] = 'walkable';
         cellsChanged.push({ x: tx, y: ty, cellType: 'walkable' });
 
-        // Check if treasure was buried here
-        const treasureIdx = this.buriedItems.findIndex(
-          (item) => item.x === tx && item.y === ty,
-        );
-        if (treasureIdx >= 0) {
-          this.buriedItems.splice(treasureIdx, 1);
-          state = { ...state, score: state.score + 100 };
-          events.push({ type: 'pickup', playerId, itemType: 'treasure' });
-          events.push({
-            type: 'match_end',
-            winnerId: playerId,
-            scores: { [playerId]: state.score },
-          });
-          this.ended = true;
+        const buried = this.buriedItems.get(buriedKey);
+        if (buried !== undefined) {
+          this.buriedItems.delete(buriedKey);
+          if (buried === 'treasure') {
+            state = { ...state, score: state.score + 100 };
+            events.push({ type: 'pickup', playerId, itemType: 'treasure' });
+            events.push({
+              type: 'match_end',
+              winnerId: playerId,
+              scores: { [playerId]: state.score },
+            });
+            this.ended = true;
+          } else if (buried === 'nugget') {
+            state = { ...state, score: state.score + 10 };
+            events.push({ type: 'pickup', playerId, itemType: 'nugget' });
+          } else {
+            // powerup: shovel | compass | bomb
+            if (state.heldPowerup === null) {
+              state = { ...state, heldPowerup: buried as 'shovel' | 'compass' | 'bomb' };
+              events.push({ type: 'pickup', playerId, itemType: buried });
+            } else {
+              this.groundItems.set(buriedKey, buried);
+            }
+          }
         }
 
         state = { ...state, digTarget: null };
@@ -167,12 +183,33 @@ export class GameMatch {
         state = applyMovement(state, this.map);
       }
 
+      // Ground pickup
+      const groundKey = `${Math.floor(state.x)},${Math.floor(state.y)}`;
+      const groundItem = this.groundItems.get(groundKey);
+      if (groundItem !== undefined) {
+        if (groundItem === 'nugget') {
+          state = { ...state, score: state.score + 10 };
+          this.groundItems.delete(groundKey);
+          events.push({ type: 'pickup', playerId, itemType: 'nugget' });
+        } else if (state.heldPowerup === null) {
+          state = { ...state, heldPowerup: groundItem as 'shovel' | 'compass' | 'bomb' };
+          this.groundItems.delete(groundKey);
+          events.push({ type: 'pickup', playerId, itemType: groundItem });
+        }
+        // else: full slot — leave item in groundItems
+      }
+
       this.players.set(playerId, state);
     }
 
     // Build and emit a state diff for each player
     for (const [playerId, player] of this.players) {
-      const detector = computeDetector(player, this.buriedItems);
+      const buriedPositions = [...this.buriedItems.keys()].map((key) => {
+        const [xs, ys] = key.split(',');
+        return { x: Number(xs), y: Number(ys) };
+      });
+      const detector = computeDetector(player, buriedPositions);
+
       const players: PlayerSnapshot[] = [...this.players.values()].map((p) => ({
         id: p.id,
         x: p.x,
@@ -180,6 +217,7 @@ export class GameMatch {
         facing: p.facing,
         digProgress: p.digTarget !== null ? 1 - p.digTicksRemaining / DIG_TICKS : -1,
         score: p.score,
+        heldPowerup: p.heldPowerup,
       }));
 
       const diff: Extract<ServerMessage, { type: 'state_diff' }> = {
@@ -189,6 +227,7 @@ export class GameMatch {
         players,
         detector,
         events,
+        groundItems: groundItemsArray,
       };
       this.emit({ type: 'player_diff', playerId, diff });
     }

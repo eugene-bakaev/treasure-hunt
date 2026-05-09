@@ -10,6 +10,7 @@ export interface PlayerState {
   digTarget: { x: number; y: number } | null;
   digTicksRemaining: number; // 0 = not digging; starts at DIG_TICKS on dig start
   score: number;
+  heldPowerup: 'shovel' | 'compass' | 'bomb' | null;
 }
 
 export const MOVE_SPEED = 4;   // cells per second

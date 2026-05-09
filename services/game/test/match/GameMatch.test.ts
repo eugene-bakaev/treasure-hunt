@@ -121,3 +121,145 @@ describe('GameMatch two-player deferred start', () => {
     match.stop();
   });
 });
+
+describe('GameMatch item pickups', () => {
+  it('digging a nugget cell awards 10 pts and emits pickup event', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+    const nugget = match['map'].items.find((i: { item: string }) => i.item === 'nugget')!;
+    const alice = match['players'].get('alice')!;
+    match['players'].set('alice', {
+      ...alice,
+      digTarget: { x: nugget.x, y: nugget.y },
+      digTicksRemaining: 1,
+    });
+
+    match.tickOnce();
+
+    const diff = [...emitted].reverse().find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    expect(diff?.type).toBe('player_diff');
+    if (diff?.type === 'player_diff') {
+      const player = diff.diff.players.find((p) => p.id === 'alice');
+      expect(player?.score).toBe(10);
+      expect(diff.diff.events).toContainEqual({
+        type: 'pickup', playerId: 'alice', itemType: 'nugget',
+      });
+      expect(match['buriedItems'].has(`${nugget.x},${nugget.y}`)).toBe(false);
+    }
+  });
+
+  it('digging a powerup cell with empty slot sets heldPowerup and emits pickup', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+    const shovel = match['map'].items.find((i: { item: string }) => i.item === 'shovel')!;
+    const alice = match['players'].get('alice')!;
+    match['players'].set('alice', {
+      ...alice,
+      heldPowerup: null,
+      digTarget: { x: shovel.x, y: shovel.y },
+      digTicksRemaining: 1,
+    });
+
+    match.tickOnce();
+
+    const diff = [...emitted].reverse().find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    expect(diff?.type).toBe('player_diff');
+    if (diff?.type === 'player_diff') {
+      const player = diff.diff.players.find((p) => p.id === 'alice');
+      expect(player?.heldPowerup).toBe('shovel');
+      expect(diff.diff.events).toContainEqual({
+        type: 'pickup', playerId: 'alice', itemType: 'shovel',
+      });
+    }
+  });
+
+  it('digging a powerup cell with full slot drops it to groundItems', () => {
+    const { match } = makeTwoPlayerMatch();
+    const shovel1 = match['map'].items.filter(
+      (i: { item: string }) => i.item === 'shovel',
+    )[0]!;
+    const alice = match['players'].get('alice')!;
+    match['players'].set('alice', {
+      ...alice,
+      heldPowerup: 'compass',
+      digTarget: { x: shovel1.x, y: shovel1.y },
+      digTicksRemaining: 1,
+    });
+
+    match.tickOnce();
+
+    expect(match['groundItems'].get(`${shovel1.x},${shovel1.y}`)).toBe('shovel');
+    expect(match['buriedItems'].has(`${shovel1.x},${shovel1.y}`)).toBe(false);
+  });
+
+  it('walking over a nugget ground item awards 10 pts and removes it', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    const groundKey = `${Math.floor(alice.x)},${Math.floor(alice.y)}`;
+    match['groundItems'].set(groundKey, 'nugget');
+
+    match.tickOnce();
+
+    const diff = [...emitted].reverse().find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    expect(diff?.type).toBe('player_diff');
+    if (diff?.type === 'player_diff') {
+      const player = diff.diff.players.find((p) => p.id === 'alice');
+      expect(player?.score).toBe(10);
+      expect(match['groundItems'].has(groundKey)).toBe(false);
+    }
+  });
+
+  it('walking over a powerup ground item with empty slot picks it up', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    const groundKey = `${Math.floor(alice.x)},${Math.floor(alice.y)}`;
+    match['players'].set('alice', { ...alice, heldPowerup: null });
+    match['groundItems'].set(groundKey, 'bomb');
+
+    match.tickOnce();
+
+    const diff = [...emitted].reverse().find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    expect(diff?.type).toBe('player_diff');
+    if (diff?.type === 'player_diff') {
+      const player = diff.diff.players.find((p) => p.id === 'alice');
+      expect(player?.heldPowerup).toBe('bomb');
+      expect(match['groundItems'].has(groundKey)).toBe(false);
+    }
+  });
+
+  it('walking over a powerup ground item with full slot leaves it in groundItems', () => {
+    const { match } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    const groundKey = `${Math.floor(alice.x)},${Math.floor(alice.y)}`;
+    match['players'].set('alice', { ...alice, heldPowerup: 'compass' });
+    match['groundItems'].set(groundKey, 'bomb');
+
+    match.tickOnce();
+
+    expect(match['groundItems'].has(groundKey)).toBe(true);
+    expect(match['groundItems'].get(groundKey)).toBe('bomb');
+  });
+
+  it('state_diff includes groundItems array', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    match['groundItems'].set(`${Math.floor(alice.x)},${Math.floor(alice.y)}`, 'shovel');
+
+    match.tickOnce();
+
+    const diff = emitted.find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    expect(diff?.type).toBe('player_diff');
+    if (diff?.type === 'player_diff') {
+      expect(Array.isArray(diff.diff.groundItems)).toBe(true);
+      expect(diff.diff.groundItems.length).toBeGreaterThan(0);
+    }
+  });
+});
