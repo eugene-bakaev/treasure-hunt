@@ -65,4 +65,40 @@ describe('generateMap', () => {
       }
     }
   });
+
+  it('items array contains exactly 13 entries', () => {
+    const map = generateMap('test-seed');
+    expect(map.items).toHaveLength(13);
+  });
+
+  it('places exactly 1 treasure, 6 nuggets, 2 shovels, 2 compasses, 2 bombs', () => {
+    const map = generateMap('test-seed');
+    expect(map.items.filter((i) => i.item === 'treasure')).toHaveLength(1);
+    expect(map.items.filter((i) => i.item === 'nugget')).toHaveLength(6);
+    expect(map.items.filter((i) => i.item === 'shovel')).toHaveLength(2);
+    expect(map.items.filter((i) => i.item === 'compass')).toHaveLength(2);
+    expect(map.items.filter((i) => i.item === 'bomb')).toHaveLength(2);
+  });
+
+  it('nuggets, shovels, compasses, bombs are each ≥5 cells from both spawns', () => {
+    const map = generateMap('test-seed');
+    for (const { x, y, item } of map.items) {
+      if (item === 'treasure') continue;
+      const d1 = Math.hypot(x - 2, y - 2);
+      const d2 = Math.hypot(x - 37, y - 37);
+      expect(Math.min(d1, d2)).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it('no two items share the same cell', () => {
+    const map = generateMap('test-seed');
+    const keys = map.items.map((i) => `${i.x},${i.y}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('items array is deterministic for the same seed', () => {
+    const a = generateMap('deterministic-items');
+    const b = generateMap('deterministic-items');
+    expect(a.items).toEqual(b.items);
+  });
 });

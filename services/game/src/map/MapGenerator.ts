@@ -1,3 +1,4 @@
+import type { ItemType } from '@treasure-hunt/protocol';
 import type { CellType } from './types.js';
 import type { MapGrid } from './types.js';
 
@@ -8,6 +9,14 @@ const SPAWN1_CENTER_Y = 2;
 const SPAWN2_CENTER_X = 37;
 const SPAWN2_CENTER_Y = 37;
 const MIN_TREASURE_DIST = 15;
+const MIN_ITEM_DIST = 5;
+
+const ITEMS_TO_PLACE: Array<{ item: Exclude<ItemType, 'treasure'>; count: number }> = [
+  { item: 'nugget', count: 6 },
+  { item: 'shovel', count: 2 },
+  { item: 'compass', count: 2 },
+  { item: 'bomb', count: 2 },
+];
 
 function makePrng(seedStr: string): () => number {
   let h = 0;
@@ -61,5 +70,29 @@ export function generateMap(seed: string): MapGrid {
     }
   }
 
-  return { width: MAP_WIDTH, height: MAP_HEIGHT, cells, treasurePos, seed };
+  const items: Array<{ x: number; y: number; item: ItemType }> = [
+    { x: treasurePos.x, y: treasurePos.y, item: 'treasure' },
+  ];
+  const occupiedKeys = new Set<string>([`${treasurePos.x},${treasurePos.y}`]);
+
+  for (const { item, count } of ITEMS_TO_PLACE) {
+    let placed = 0;
+    while (placed < count) {
+      const x = Math.floor(rng() * MAP_WIDTH);
+      const y = Math.floor(rng() * MAP_HEIGHT);
+      const d1 = Math.hypot(x - SPAWN1_CENTER_X, y - SPAWN1_CENTER_Y);
+      const d2 = Math.hypot(x - SPAWN2_CENTER_X, y - SPAWN2_CENTER_Y);
+      if (
+        cells[y]![x] === 'rock' &&
+        Math.min(d1, d2) >= MIN_ITEM_DIST &&
+        !occupiedKeys.has(`${x},${y}`)
+      ) {
+        items.push({ x, y, item });
+        occupiedKeys.add(`${x},${y}`);
+        placed++;
+      }
+    }
+  }
+
+  return { width: MAP_WIDTH, height: MAP_HEIGHT, cells, treasurePos, items, seed };
 }
