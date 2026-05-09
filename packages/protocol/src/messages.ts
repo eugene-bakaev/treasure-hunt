@@ -26,7 +26,7 @@ export interface PlayerSnapshot {
   facing: Facing;
   digProgress: number; // 0–1; negative means not digging
   score: number;
-  heldPowerup: 'shovel' | 'compass' | 'bomb' | null;
+  heldPowerup: Exclude<ItemType, 'treasure' | 'nugget'> | null;
 }
 
 export type MatchEvent =
