@@ -12,14 +12,11 @@ export default function PixiCanvas() {
   const appRef = useRef<Application | null>(null);
   const mapRendRef = useRef<MapRenderer | null>(null);
   const playerRendRef = useRef<PlayerRenderer | null>(null);
-  const initedRef = useRef(false);
   const cellsRef = useRef<typeof cells | null>(null);
 
-  const { mapWidth, mapHeight, cells } = useGameStore((s) => ({
-    mapWidth: s.mapWidth,
-    mapHeight: s.mapHeight,
-    cells: s.cells,
-  }));
+  const mapWidth = useGameStore((s) => s.mapWidth);
+  const mapHeight = useGameStore((s) => s.mapHeight);
+  const cells = useGameStore((s) => s.cells);
 
   // Keep cells ref in sync
   cellsRef.current = cells;
@@ -27,11 +24,10 @@ export default function PixiCanvas() {
   // Bootstrap Pixi once the container is mounted
   useEffect(() => {
     if (!containerRef.current) return;
-    if (initedRef.current) return;
-    initedRef.current = true;
 
     const app = new Application();
     appRef.current = app;
+    let active = true;
 
     app
       .init({
@@ -40,14 +36,24 @@ export default function PixiCanvas() {
         background: 0x222222,
       })
       .then(() => {
+        if (!active) {
+          // Cleanup fired before init resolved — destroy now that it's safe
+          app.destroy(true);
+          return;
+        }
         containerRef.current?.appendChild(app.canvas);
         mapRendRef.current = new MapRenderer(app);
         playerRendRef.current = new PlayerRenderer(app);
       });
 
     return () => {
-      initedRef.current = false;
-      app.destroy(true);
+      active = false;
+      mapRendRef.current = null;
+      playerRendRef.current = null;
+      // Only destroy if init already resolved (renderer present); otherwise .then() handles it
+      if (app.renderer) {
+        app.destroy(true);
+      }
       appRef.current = null;
     };
   }, []);

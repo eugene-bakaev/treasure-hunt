@@ -12,13 +12,11 @@ export default function Match() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { detector, score, matchEnded, winnerId, playerId } = useGameStore((s) => ({
-    detector: s.detector,
-    score: s.score,
-    matchEnded: s.matchEnded,
-    winnerId: s.winnerId,
-    playerId: s.playerId,
-  }));
+  const detector = useGameStore((s) => s.detector);
+  const score = useGameStore((s) => s.score);
+  const matchEnded = useGameStore((s) => s.matchEnded);
+  const winnerId = useGameStore((s) => s.winnerId);
+  const playerId = useGameStore((s) => s.playerId);
 
   useEffect(() => {
     connect();
