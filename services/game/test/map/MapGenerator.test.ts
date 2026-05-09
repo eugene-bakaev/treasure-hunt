@@ -40,4 +40,29 @@ describe('generateMap', () => {
     // It is astronomically unlikely for two random seeds to yield the same treasure pos
     expect(a.treasurePos).not.toEqual(b.treasurePos);
   });
+
+  const map = generateMap('test-seed-phase2');
+
+  it('second spawn pocket cells (36–38, 36–38) are walkable', () => {
+    for (let y = 36; y <= 38; y++) {
+      for (let x = 36; x <= 38; x++) {
+        expect(map.cells[y]![x]).toBe('walkable');
+      }
+    }
+  });
+
+  it('treasure is at least 15 cells from both spawn centers', () => {
+    const { x: tx, y: ty } = map.treasurePos;
+    const d1 = Math.hypot(tx - 2, ty - 2);
+    const d2 = Math.hypot(tx - 37, ty - 37);
+    expect(Math.min(d1, d2)).toBeGreaterThanOrEqual(15);
+  });
+
+  it('first spawn pocket cells (1–3, 1–3) are still walkable', () => {
+    for (let y = 1; y <= 3; y++) {
+      for (let x = 1; x <= 3; x++) {
+        expect(map.cells[y]![x]).toBe('walkable');
+      }
+    }
+  });
 });

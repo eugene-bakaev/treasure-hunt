@@ -1,9 +1,12 @@
-import type { CellType, MapGrid } from './types.js';
+import type { CellType } from './types.js';
+import type { MapGrid } from './types.js';
 
 const MAP_WIDTH = 40;
 const MAP_HEIGHT = 40;
-const SPAWN_CENTER_X = 2;
-const SPAWN_CENTER_Y = 2;
+const SPAWN1_CENTER_X = 2;
+const SPAWN1_CENTER_Y = 2;
+const SPAWN2_CENTER_X = 37;
+const SPAWN2_CENTER_Y = 37;
 const MIN_TREASURE_DIST = 15;
 
 function makePrng(seedStr: string): () => number {
@@ -19,6 +22,22 @@ function makePrng(seedStr: string): () => number {
   };
 }
 
+function carveSpawnPocket(
+  cells: CellType[][],
+  cx: number,
+  cy: number,
+): void {
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const x = cx + dx;
+      const y = cy + dy;
+      if (x >= 0 && y >= 0 && x < MAP_WIDTH && y < MAP_HEIGHT) {
+        cells[y]![x] = 'walkable';
+      }
+    }
+  }
+}
+
 export function generateMap(seed: string): MapGrid {
   const rng = makePrng(seed);
 
@@ -26,26 +45,17 @@ export function generateMap(seed: string): MapGrid {
     Array.from({ length: MAP_WIDTH }, (): CellType => 'rock'),
   );
 
-  // Carve 3×3 spawn pocket centered at (SPAWN_CENTER_X, SPAWN_CENTER_Y)
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      const cx = SPAWN_CENTER_X + dx;
-      const cy = SPAWN_CENTER_Y + dy;
-      if (cx >= 0 && cy >= 0 && cx < MAP_WIDTH && cy < MAP_HEIGHT) {
-        cells[cy]![cx] = 'walkable';
-      }
-    }
-  }
+  carveSpawnPocket(cells, SPAWN1_CENTER_X, SPAWN1_CENTER_Y);
+  carveSpawnPocket(cells, SPAWN2_CENTER_X, SPAWN2_CENTER_Y);
 
-  // Place treasure in a random rock cell at least MIN_TREASURE_DIST from spawn center
+  // Place treasure in a rock cell ≥ MIN_TREASURE_DIST from both spawn centers
   let treasurePos: { x: number; y: number };
   while (true) {
     const tx = Math.floor(rng() * MAP_WIDTH);
     const ty = Math.floor(rng() * MAP_HEIGHT);
-    const dx = tx - SPAWN_CENTER_X;
-    const dy = ty - SPAWN_CENTER_Y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist >= MIN_TREASURE_DIST && cells[ty]![tx] === 'rock') {
+    const d1 = Math.hypot(tx - SPAWN1_CENTER_X, ty - SPAWN1_CENTER_Y);
+    const d2 = Math.hypot(tx - SPAWN2_CENTER_X, ty - SPAWN2_CENTER_Y);
+    if (Math.min(d1, d2) >= MIN_TREASURE_DIST && cells[ty]![tx] === 'rock') {
       treasurePos = { x: tx, y: ty };
       break;
     }
