@@ -11,7 +11,6 @@ export function attachWebSocket(server: http.Server): void {
   const gameWsUrl =
     process.env['GAME_INTERNAL_WS_URL'] ?? 'ws://localhost:3010';
 
-  // Map from playerId → client WebSocket
   const clients = new Map<string, WebSocket>();
 
   const proxy = new GameProxy(gameWsUrl, (msg: GameToGatewayMsg) => {
@@ -32,16 +31,18 @@ export function attachWebSocket(server: http.Server): void {
 
   const wss = new WebSocketServer({ server, path: '/ws' });
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
+    const url = new URL(req.url ?? '/', 'ws://x');
+    const matchId = url.searchParams.get('matchId') ?? 'dev';
     const playerId = uuidv4();
     clients.set(playerId, ws);
 
-    proxy.send({ type: 'player_join', playerId });
+    proxy.send({ type: 'player_join', matchId, playerId });
 
     ws.on('message', (data) => {
       try {
         const intent = JSON.parse(data.toString()) as ClientMessage;
-        proxy.send({ type: 'player_intent', playerId, intent });
+        proxy.send({ type: 'player_intent', matchId, playerId, intent });
       } catch {
         // ignore malformed
       }
@@ -49,7 +50,7 @@ export function attachWebSocket(server: http.Server): void {
 
     ws.on('close', () => {
       clients.delete(playerId);
-      proxy.send({ type: 'player_leave', playerId });
+      proxy.send({ type: 'player_leave', matchId, playerId });
     });
   });
 }
