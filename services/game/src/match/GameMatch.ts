@@ -44,10 +44,13 @@ export class GameMatch {
   }
 
   addPlayer(playerId: string): void {
+    if (this.players.size >= 2) return;
+    const spawn = this.players.size === 0
+      ? { x: 2.5, y: 2.5 }
+      : { x: 37.5, y: 37.5 };
     this.players.set(playerId, {
       id: playerId,
-      x: 2.5,
-      y: 2.5,
+      ...spawn,
       facing: 'E',
       moveDir: null,
       digTarget: null,
@@ -56,13 +59,22 @@ export class GameMatch {
     });
     this.intentQueues.set(playerId, []);
 
+    if (this.players.size === 2) {
+      for (const [pid] of this.players) {
+        this.emitInit(pid);
+      }
+      this.start();
+    }
+  }
+
+  private emitInit(playerId: string): void {
+    const player = this.players.get(playerId)!;
     const walkableCells: Array<{ x: number; y: number }> = [];
     for (let y = 0; y < this.map.height; y++) {
       for (let x = 0; x < this.map.width; x++) {
         if (this.map.cells[y]![x] === 'walkable') walkableCells.push({ x, y });
       }
     }
-
     const init: Extract<ServerMessage, { type: 'init' }> = {
       type: 'init',
       matchId: this.matchId,
@@ -70,8 +82,8 @@ export class GameMatch {
       mapWidth: this.map.width,
       mapHeight: this.map.height,
       walkableCells,
-      spawnX: 2.5,
-      spawnY: 2.5,
+      spawnX: player.x,
+      spawnY: player.y,
     };
     this.emit({ type: 'player_init', playerId, init });
   }
