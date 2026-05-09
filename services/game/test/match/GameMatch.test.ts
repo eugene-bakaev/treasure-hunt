@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { GameToGatewayMsg } from '@treasure-hunt/protocol';
 import { GameMatch, type MatchEventEmitter } from '../../src/match/GameMatch.js';
 

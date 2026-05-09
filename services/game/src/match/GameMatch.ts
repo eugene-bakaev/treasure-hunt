@@ -44,7 +44,7 @@ export class GameMatch {
   }
 
   addPlayer(playerId: string): void {
-    if (this.players.size >= 2) return;
+    if (this.players.has(playerId) || this.players.size >= 2) return;
     const spawn = this.players.size === 0
       ? { x: 2.5, y: 2.5 }
       : { x: 37.5, y: 37.5 };

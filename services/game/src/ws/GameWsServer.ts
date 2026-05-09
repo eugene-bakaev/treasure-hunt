@@ -45,7 +45,6 @@ export class GameWsServer {
   private handleMessage(_ws: WebSocket, msg: GatewayToGameMsg): void {
     if (msg.type === 'player_join') {
       this.match.addPlayer(msg.playerId);
-      this.match.start();
     } else if (msg.type === 'player_leave') {
       this.match.removePlayer(msg.playerId);
     } else if (msg.type === 'player_intent') {
