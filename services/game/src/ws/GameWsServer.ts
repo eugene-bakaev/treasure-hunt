@@ -42,7 +42,7 @@ export class GameWsServer {
     });
   }
 
-  private handleMessage(ws: WebSocket, msg: GatewayToGameMsg): void {
+  private handleMessage(_ws: WebSocket, msg: GatewayToGameMsg): void {
     if (msg.type === 'player_join') {
       this.match.addPlayer(msg.playerId);
       this.match.start();
