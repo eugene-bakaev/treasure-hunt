@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createServer } from '../src/server.js';
+import { resetStore } from '../src/store.js';
 
 describe('lobby server', () => {
+  beforeEach(() => resetStore());
+
   it('GET /health returns service-tagged ok', async () => {
     const app = createServer();
     const res = await request(app).get('/health');

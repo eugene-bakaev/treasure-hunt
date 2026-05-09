@@ -11,9 +11,13 @@ const codeIndex = new Map<string, string>();      // joinCode → matchId
 
 function generateJoinCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  return Array.from({ length: 6 }, () =>
-    chars[Math.floor(Math.random() * chars.length)],
-  ).join('');
+  let code: string;
+  do {
+    code = Array.from({ length: 6 }, () =>
+      chars[Math.floor(Math.random() * chars.length)],
+    ).join('');
+  } while (codeIndex.has(code));
+  return code;
 }
 
 export function createMatch(): MatchRecord {
@@ -28,4 +32,9 @@ export function createMatch(): MatchRecord {
 export function resolveJoinCode(joinCode: string): MatchRecord | undefined {
   const matchId = codeIndex.get(joinCode.toUpperCase());
   return matchId !== undefined ? matches.get(matchId) : undefined;
+}
+
+export function resetStore(): void {
+  matches.clear();
+  codeIndex.clear();
 }
