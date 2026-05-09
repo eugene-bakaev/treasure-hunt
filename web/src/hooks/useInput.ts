@@ -32,12 +32,14 @@ export function useInput({ onMove, onStop, onDig }: UseInputCallbacks): void {
       if (e.repeat) return;
 
       if (DIG_KEYS.has(e.key)) {
+        e.preventDefault();
         onDig();
         return;
       }
 
       const dir = KEY_TO_DIR[e.key];
       if (dir) {
+        e.preventDefault();
         heldKey.current = e.key;
         onMove(dir);
       }
