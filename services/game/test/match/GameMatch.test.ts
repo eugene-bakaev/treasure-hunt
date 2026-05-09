@@ -1,8 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { GameMatch, type MatchEventEmitter } from '../../src/match/GameMatch.js';
 import type { GameToGatewayMsg } from '@treasure-hunt/protocol';
-import { generateMap } from '../../src/map/MapGenerator.js';
-import { DIG_TICKS } from '../../src/match/digSystem.js';
 
 function makeMatch() {
   const emitted: GameToGatewayMsg[] = [];
@@ -64,7 +62,6 @@ describe('GameMatch', () => {
 
   it('ends the match when treasure is dug', () => {
     // Use fixed-seed to know the treasure position
-    const map = generateMap('fixed-seed');
     const { match, emitted } = makeMatch();
     match.addPlayer('alice');
 
