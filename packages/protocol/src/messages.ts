@@ -2,6 +2,7 @@
 
 export type Facing = 'N' | 'S' | 'E' | 'W';
 export type CellType = 'rock' | 'walkable';
+export type ItemType = 'treasure' | 'nugget' | 'shovel' | 'compass' | 'bomb';
 
 // --- Browser → Gateway → Game Server ---
 
@@ -25,11 +26,12 @@ export interface PlayerSnapshot {
   facing: Facing;
   digProgress: number; // 0–1; negative means not digging
   score: number;
+  heldPowerup: 'shovel' | 'compass' | 'bomb' | null;
 }
 
 export type MatchEvent =
   | { type: 'match_end'; winnerId: string; scores: Record<string, number> }
-  | { type: 'pickup'; playerId: string; itemType: 'treasure' };
+  | { type: 'pickup'; playerId: string; itemType: ItemType };
 
 export type ServerMessage =
   | {
@@ -49,6 +51,7 @@ export type ServerMessage =
       players: PlayerSnapshot[];
       detector: number; // 0–100, private per-player
       events: MatchEvent[];
+      groundItems: Array<{ x: number; y: number; item: ItemType }>;
     };
 
 // --- Internal: Gateway → Game Server ---
