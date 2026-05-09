@@ -8,20 +8,19 @@ vi.mock('../src/pixi/PixiCanvas.js', () => ({
 }));
 
 vi.mock('../src/net/socket.js', () => ({
-  connect: () => {},
+  connect: (_matchId: string) => {},
   disconnect: () => {},
   sendIntent: () => {},
 }));
 
+vi.mock('../src/net/lobby.js', () => ({
+  createMatch: vi.fn().mockResolvedValue({ matchId: 'match-123', joinCode: 'ABC123' }),
+  joinMatch: vi.fn().mockResolvedValue({ matchId: 'match-456' }),
+}));
+
 vi.mock('../src/state/gameStore.js', () => ({
   useGameStore: (sel: (s: Record<string, unknown>) => unknown) =>
-    sel({
-      detector: 50,
-      score: 0,
-      matchEnded: false,
-      winnerId: null,
-      playerId: 'test-player',
-    }),
+    sel({ detector: 50, score: 0, matchEnded: false, winnerId: null, playerId: null }),
 }));
 
 function renderAt(path: string) {
@@ -43,9 +42,13 @@ describe('App routing', () => {
     expect(screen.getByRole('heading', { name: /lobby/i })).toBeInTheDocument();
   });
 
-  it('renders Match at /match/:id', () => {
+  it('renders Join at /join/:joinCode', () => {
+    renderAt('/join/ABC123');
+    expect(screen.getByText(/joining/i)).toBeInTheDocument();
+  });
+
+  it('renders Match waiting overlay at /match/:id (no playerId)', () => {
     renderAt('/match/abc-123');
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
-    expect(screen.getByTestId('pixi-canvas')).toBeInTheDocument();
+    expect(screen.getByText(/waiting for opponent/i)).toBeInTheDocument();
   });
 });
