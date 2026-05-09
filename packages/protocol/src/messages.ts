@@ -54,9 +54,9 @@ export type ServerMessage =
 // --- Internal: Gateway → Game Server ---
 
 export type GatewayToGameMsg =
-  | { type: 'player_join'; playerId: string }
-  | { type: 'player_leave'; playerId: string }
-  | { type: 'player_intent'; playerId: string; intent: ClientMessage };
+  | { type: 'player_join'; matchId: string; playerId: string }
+  | { type: 'player_leave'; matchId: string; playerId: string }
+  | { type: 'player_intent'; matchId: string; playerId: string; intent: ClientMessage };
 
 // --- Internal: Game Server → Gateway ---
 
