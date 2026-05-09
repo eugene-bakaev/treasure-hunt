@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Application } from 'pixi.js';
+import type { CellType } from '@treasure-hunt/protocol';
 import { MapRenderer } from './renderers/MapRenderer.js';
 import { PlayerRenderer } from './renderers/PlayerRenderer.js';
 import { useGameStore } from '../state/gameStore.js';
@@ -12,12 +13,16 @@ export default function PixiCanvas() {
   const mapRendRef = useRef<MapRenderer | null>(null);
   const playerRendRef = useRef<PlayerRenderer | null>(null);
   const initedRef = useRef(false);
+  const cellsRef = useRef<typeof cells | null>(null);
 
   const { mapWidth, mapHeight, cells } = useGameStore((s) => ({
     mapWidth: s.mapWidth,
     mapHeight: s.mapHeight,
     cells: s.cells,
   }));
+
+  // Keep cells ref in sync
+  cellsRef.current = cells;
 
   // Bootstrap Pixi once the container is mounted
   useEffect(() => {
@@ -50,15 +55,15 @@ export default function PixiCanvas() {
   // Re-init the map when the store has a real map
   useEffect(() => {
     if (!mapRendRef.current || mapWidth === 0) return;
-    mapRendRef.current.initMap(mapWidth, mapHeight, cells);
-  }, [mapWidth, mapHeight, cells]);
+    mapRendRef.current.initMap(mapWidth, mapHeight, cellsRef.current!);
+  }, [mapWidth, mapHeight]);
 
   // Subscribe to players at high frequency using a store subscriber
   useEffect(() => {
     const unsub = useGameStore.subscribe((state) => {
       playerRendRef.current?.update(state.players);
       // Update only changed cells
-      const changed = new Map<string, import('@treasure-hunt/protocol').CellType>();
+      const changed = new Map<string, CellType>();
       for (const [k, v] of state.cells) {
         changed.set(k, v);
       }
