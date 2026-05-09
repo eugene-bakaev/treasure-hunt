@@ -42,8 +42,16 @@ export default function PixiCanvas() {
           return;
         }
         containerRef.current?.appendChild(app.canvas);
-        mapRendRef.current = new MapRenderer(app);
+        const mapRend = new MapRenderer(app);
+        mapRendRef.current = mapRend;
         playerRendRef.current = new PlayerRenderer(app);
+
+        // If the store already has map data (arrived before Pixi finished init),
+        // draw it now so the map effect's missed window is recovered.
+        const { mapWidth, mapHeight } = useGameStore.getState();
+        if (mapWidth > 0 && cellsRef.current) {
+          mapRend.initMap(mapWidth, mapHeight, cellsRef.current);
+        }
       });
 
     return () => {

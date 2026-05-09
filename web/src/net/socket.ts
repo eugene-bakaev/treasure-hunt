@@ -8,9 +8,10 @@ let ws: WebSocket | null = null;
 export function connect(): void {
   if (ws && ws.readyState !== WebSocket.CLOSED) return;
 
-  ws = new WebSocket(WS_URL);
+  const socket = new WebSocket(WS_URL);
+  ws = socket;
 
-  ws.onmessage = (event: MessageEvent<string>) => {
+  socket.onmessage = (event: MessageEvent<string>) => {
     try {
       const msg = JSON.parse(event.data) as ServerMessage;
       const { playerId } = useGameStore.getState();
@@ -25,12 +26,14 @@ export function connect(): void {
     }
   };
 
-  ws.onerror = () => {
-    ws = null;
+  // Guard against stale closures overwriting a newer socket assigned by a
+  // subsequent connect() call (e.g. React 18 StrictMode double-invoke).
+  socket.onerror = () => {
+    if (ws === socket) ws = null;
   };
 
-  ws.onclose = () => {
-    ws = null;
+  socket.onclose = () => {
+    if (ws === socket) ws = null;
   };
 }
 
