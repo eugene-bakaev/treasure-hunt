@@ -14,13 +14,14 @@ vi.mock('../src/net/socket.js', () => ({
 }));
 
 vi.mock('../src/state/gameStore.js', () => ({
-  useGameStore: () => ({
-    detector: 50,
-    score: 0,
-    matchEnded: false,
-    winnerId: null,
-    playerId: 'test-player',
-  }),
+  useGameStore: (sel: (s: Record<string, unknown>) => unknown) =>
+    sel({
+      detector: 50,
+      score: 0,
+      matchEnded: false,
+      winnerId: null,
+      playerId: 'test-player',
+    }),
 }));
 
 function renderAt(path: string) {
@@ -45,5 +46,6 @@ describe('App routing', () => {
   it('renders Match at /match/:id', () => {
     renderAt('/match/abc-123');
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    expect(screen.getByTestId('pixi-canvas')).toBeInTheDocument();
   });
 });
