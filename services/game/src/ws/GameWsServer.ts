@@ -6,13 +6,10 @@ import { GameMatch } from '../match/GameMatch.js';
 export class GameWsServer {
   private readonly port: number;
   private wss: WebSocketServer | null = null;
-  private match: GameMatch;
+  private readonly matches = new Map<string, GameMatch>();
 
   constructor(port: number) {
     this.port = port;
-    // One hardcoded match for Phase 1
-    const seed = process.env['MATCH_SEED'] ?? uuidv4();
-    this.match = new GameMatch('dev', seed, (msg) => this.broadcast(msg));
   }
 
   listen(): Promise<void> {
@@ -24,31 +21,42 @@ export class GameWsServer {
   }
 
   close(): Promise<void> {
-    this.match.stop();
+    for (const match of this.matches.values()) {
+      match.stop();
+    }
     return new Promise((resolve) => {
       if (!this.wss) { resolve(); return; }
       this.wss.close(() => resolve());
     });
   }
 
+  private getOrCreateMatch(matchId: string): GameMatch {
+    if (!this.matches.has(matchId)) {
+      const seed = uuidv4();
+      const match = new GameMatch(matchId, seed, (msg) => this.broadcast(msg));
+      this.matches.set(matchId, match);
+    }
+    return this.matches.get(matchId)!;
+  }
+
   private handleConnection(ws: WebSocket): void {
     ws.on('message', (data) => {
       try {
         const msg = JSON.parse(data.toString()) as GatewayToGameMsg;
-        this.handleMessage(ws, msg);
+        this.handleMessage(msg);
       } catch {
         // ignore malformed messages
       }
     });
   }
 
-  private handleMessage(_ws: WebSocket, msg: GatewayToGameMsg): void {
+  private handleMessage(msg: GatewayToGameMsg): void {
     if (msg.type === 'player_join') {
-      this.match.addPlayer(msg.playerId);
+      this.getOrCreateMatch(msg.matchId).addPlayer(msg.playerId);
     } else if (msg.type === 'player_leave') {
-      this.match.removePlayer(msg.playerId);
+      this.matches.get(msg.matchId)?.removePlayer(msg.playerId);
     } else if (msg.type === 'player_intent') {
-      this.match.queueIntent(msg.playerId, msg.intent);
+      this.matches.get(msg.matchId)?.queueIntent(msg.playerId, msg.intent);
     }
   }
 

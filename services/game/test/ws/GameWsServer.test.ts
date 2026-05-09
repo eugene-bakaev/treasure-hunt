@@ -32,9 +32,9 @@ describe('GameWsServer', () => {
     await new Promise<void>((resolve, reject) => {
       const ws = new WebSocket(`ws://localhost:${TEST_PORT + 1}`);
       ws.on('open', () => {
-        // Two players must join before player_init is emitted (deferred start)
-        const msg1: GatewayToGameMsg = { type: 'player_join', playerId: 'alice' };
-        const msg2: GatewayToGameMsg = { type: 'player_join', playerId: 'bob' };
+        // Two players must join (with matchId) before player_init is emitted
+        const msg1: GatewayToGameMsg = { type: 'player_join', matchId: 'test-match', playerId: 'alice' };
+        const msg2: GatewayToGameMsg = { type: 'player_join', matchId: 'test-match', playerId: 'bob' };
         ws.send(JSON.stringify(msg1));
         ws.send(JSON.stringify(msg2));
       });
