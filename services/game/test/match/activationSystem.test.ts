@@ -209,6 +209,7 @@ describe('activationSystem', () => {
       for (let y = 0; y <= 2; y++) {
         for (let x = 1; x <= 3; x++) {
           expect(result.cellsChanged).toContainEqual({ x, y, cellType: 'walkable' });
+          expect(ctx.map.cells[y][x]).toBe('walkable');
         }
       }
 
@@ -325,11 +326,9 @@ describe('activationSystem', () => {
       expect(result.player.heldPowerup).not.toBeNull();
       expect(result.player.heldPowerup).not.toBe('bomb'); // slot was emptied, then refilled
       expect(groundItems.size).toBe(1);
-      
-      const groundItemKeys = Array.from(groundItems.keys());
+
       const groundItemTypes = Array.from(groundItems.values());
-      const heldPowerup = result.player.heldPowerup;
-      
+      const heldPowerup = result.player.heldPowerup;      
       expect(heldPowerup === 'shovel' || heldPowerup === 'compass').toBe(true);
       expect(groundItemTypes[0] === 'shovel' || groundItemTypes[0] === 'compass').toBe(true);
       expect(groundItemTypes[0]).not.toBe(heldPowerup);

@@ -106,6 +106,7 @@ export function activatePowerup(ctx: ActivationContext): ActivationResult {
         }
 
         if (ctx.map.cells[y]![x] === 'rock') {
+          ctx.map.cells[y]![x] = 'walkable';
           cellsChanged.push({ x, y, cellType: 'walkable' });
           newlyWalkable.push({ x, y });
         }
