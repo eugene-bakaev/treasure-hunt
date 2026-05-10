@@ -9,7 +9,8 @@ export type ItemType = 'treasure' | 'nugget' | 'shovel' | 'compass' | 'bomb';
 export type ClientMessage =
   | { type: 'move'; dir: Facing }
   | { type: 'stop' }
-  | { type: 'dig' };
+  | { type: 'dig' }
+  | { type: 'activate' };
 
 // --- Game Server → Gateway → Browser ---
 
@@ -19,6 +20,12 @@ export interface CellChange {
   cellType: CellType;
 }
 
+export interface PlayerBuffs {
+  fasterShovelTicksRemaining: number;
+}
+
+export type PowerupType = Exclude<ItemType, 'treasure' | 'nugget'>;
+
 export interface PlayerSnapshot {
   id: string;
   x: number;
@@ -26,12 +33,21 @@ export interface PlayerSnapshot {
   facing: Facing;
   digProgress: number; // 0–1; negative means not digging
   score: number;
-  heldPowerup: Exclude<ItemType, 'treasure' | 'nugget'> | null;
+  heldPowerup: PowerupType | null;
+  buffs: PlayerBuffs;
 }
+
+export type CompassResult =
+  | { kind: 'exact'; x: number; y: number; itemType: ItemType }
+  | { kind: 'direction'; angleRad: number }
+  | { kind: 'no_target' };
 
 export type MatchEvent =
   | { type: 'match_end'; winnerId: string; scores: Record<string, number> }
-  | { type: 'pickup'; playerId: string; itemType: ItemType };
+  | { type: 'pickup'; playerId: string; itemType: ItemType }
+  | { type: 'powerup_activate'; playerId: string; itemType: PowerupType }
+  | { type: 'compass_result'; playerId: string; result: CompassResult }
+  | { type: 'bomb_detonate'; x: number; y: number; playerId: string };
 
 export type ServerMessage =
   | {
