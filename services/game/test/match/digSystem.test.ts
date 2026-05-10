@@ -19,6 +19,8 @@ function makePlayer(overrides: Partial<PlayerState> = {}): PlayerState {
     digTarget: null,
     digTicksRemaining: 0,
     score: 0,
+    heldPowerup: null,
+    fasterShovelTicksRemaining: 0,
     ...overrides,
   };
 }

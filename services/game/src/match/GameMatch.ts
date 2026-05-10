@@ -61,6 +61,7 @@ export class GameMatch {
       digTicksRemaining: 0,
       score: 0,
       heldPowerup: null,
+      fasterShovelTicksRemaining: 0,
     });
     this.intentQueues.set(playerId, []);
 
@@ -224,6 +225,9 @@ export class GameMatch {
         digProgress: p.digTarget !== null ? 1 - p.digTicksRemaining / DIG_TICKS : -1,
         score: p.score,
         heldPowerup: p.heldPowerup,
+        buffs: {
+          fasterShovelTicksRemaining: p.fasterShovelTicksRemaining,
+        },
       }));
 
       const diff: Extract<ServerMessage, { type: 'state_diff' }> = {

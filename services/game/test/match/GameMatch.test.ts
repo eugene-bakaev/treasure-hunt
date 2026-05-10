@@ -262,4 +262,20 @@ describe('GameMatch item pickups', () => {
       expect(diff.diff.groundItems.length).toBeGreaterThan(0);
     }
   });
+
+  it('surfaces buffs in player snapshot', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+
+    match.tickOnce();
+
+    const diff = emitted.find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    expect(diff?.type).toBe('player_diff');
+    if (diff?.type === 'player_diff') {
+      const player = diff.diff.players.find((p) => p.id === 'alice');
+      expect(player?.buffs).toBeDefined();
+      expect(player?.buffs.fasterShovelTicksRemaining).toBe(0);
+    }
+  });
 });
