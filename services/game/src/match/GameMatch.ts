@@ -246,32 +246,34 @@ export class GameMatch {
       this.players.set(playerId, state);
     }
 
+    // Pre-compute shared state for broadcasts
+    const buriedPositions = [...this.buriedItems.keys()].map((key) => {
+      const [xs, ys] = key.split(',');
+      return { x: Number(xs), y: Number(ys) };
+    });
+
+    const playersSnapshot: PlayerSnapshot[] = [...this.players.values()].map((p) => ({
+      id: p.id,
+      x: p.x,
+      y: p.y,
+      facing: p.facing,
+      digProgress: p.digTarget !== null ? 1 - p.digTicksRemaining / DIG_TICKS : -1,
+      score: p.score,
+      heldPowerup: p.heldPowerup,
+      buffs: {
+        fasterShovelTicksRemaining: p.fasterShovelTicksRemaining,
+      },
+    }));
+
     // Build and emit a state diff for each player
     for (const [playerId, player] of this.players) {
-      const buriedPositions = [...this.buriedItems.keys()].map((key) => {
-        const [xs, ys] = key.split(',');
-        return { x: Number(xs), y: Number(ys) };
-      });
       const detector = computeDetector(player, buriedPositions);
-
-      const players: PlayerSnapshot[] = [...this.players.values()].map((p) => ({
-        id: p.id,
-        x: p.x,
-        y: p.y,
-        facing: p.facing,
-        digProgress: p.digTarget !== null ? 1 - p.digTicksRemaining / DIG_TICKS : -1,
-        score: p.score,
-        heldPowerup: p.heldPowerup,
-        buffs: {
-          fasterShovelTicksRemaining: p.fasterShovelTicksRemaining,
-        },
-      }));
 
       const diff: Extract<ServerMessage, { type: 'state_diff' }> = {
         type: 'state_diff',
         tick: this.tick,
         cellsChanged,
-        players,
+        players: playersSnapshot,
         detector,
         events: [...events, ...(playerPrivateEvents.get(playerId) ?? [])],
         groundItems: groundItemsArray,
