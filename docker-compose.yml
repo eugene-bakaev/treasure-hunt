@@ -35,6 +35,8 @@ services:
       POSTGRES_URL: postgres://treasure:treasure@postgres:5432/treasure
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       GAME_INTERNAL_WS_URL: ws://game:3010
+      LOBBY_URL: http://lobby:3001
+      WEB_URL: http://web:5173
     ports:
       - '3000:3000'
     depends_on:

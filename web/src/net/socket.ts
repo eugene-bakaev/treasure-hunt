@@ -1,9 +1,10 @@
 import type { ClientMessage, ServerMessage } from '@treasure-hunt/protocol';
 import { initFromServerMsg, applyDiff, useGameStore } from '../state/gameStore.js';
 
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const WS_BASE: string =
   (import.meta.env as Record<string, string | undefined>)['VITE_WS_URL'] ??
-  'ws://localhost:3000/ws';
+  `${protocol}//${window.location.host}/ws`;
 
 let ws: WebSocket | null = null;
 

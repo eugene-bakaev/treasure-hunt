@@ -6,6 +6,12 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    allowedHosts: ['8062-178-136-108-149.ngrok-free.app', 'web', 'gateway', '.ngrok-free.app'],
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 5173,
+    allowedHosts: ['8062-178-136-108-149.ngrok-free.app', 'web', 'gateway', '.ngrok-free.app'],
   },
   test: {
     environment: 'jsdom',

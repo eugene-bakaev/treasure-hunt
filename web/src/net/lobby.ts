@@ -1,6 +1,6 @@
 const LOBBY_URL: string =
   (import.meta.env as Record<string, string | undefined>)['VITE_LOBBY_URL'] ??
-  'http://localhost:3001';
+  ''; // empty string means relative to same origin
 
 export async function createMatch(): Promise<{ matchId: string; joinCode: string }> {
   const res = await fetch(`${LOBBY_URL}/match`, { method: 'POST' });

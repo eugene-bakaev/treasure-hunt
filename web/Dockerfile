@@ -4,12 +4,15 @@ RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
 FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY packages/protocol/package.json ./packages/protocol/
 COPY web/package.json ./web/
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY tsconfig.base.json ./
+COPY packages/protocol ./packages/protocol
 COPY web ./web
+RUN pnpm --filter @treasure-hunt/protocol build
 RUN pnpm --filter @treasure-hunt/web build
 
 FROM node:22-alpine AS runtime
