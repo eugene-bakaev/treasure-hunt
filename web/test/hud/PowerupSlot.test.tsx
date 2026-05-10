@@ -22,4 +22,10 @@ describe('PowerupSlot', () => {
     render(<PowerupSlot heldPowerup="bomb" />);
     expect(screen.getByText('BOMB')).toBeInTheDocument();
   });
+
+  it('renders "(active)" and has reduced opacity when disabled', () => {
+    const { container } = render(<PowerupSlot heldPowerup="shovel" disabled />);
+    expect(screen.getByText('SHOVEL (active)')).toBeInTheDocument();
+    expect(container.firstChild).toHaveStyle('opacity: 0.4');
+  });
 });

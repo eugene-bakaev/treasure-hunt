@@ -175,4 +175,192 @@ describe('activationSystem', () => {
       });
     });
   });
+
+  describe('bomb', () => {
+    const createBombMap = (): MapGrid => {
+      const map: MapGrid = {
+        width: 10,
+        height: 10,
+        cells: Array.from({ length: 10 }, () => Array(10).fill('rock')),
+        treasurePos: { x: 5, y: 5 },
+        items: [],
+        seed: 'test',
+      };
+      return map;
+    };
+
+    it('flips rock cells to walkable and emits bomb_detonate', () => {
+      // player at 1.5, 1.5 facing E (facing dx: 1, dy: 0)
+      // target should be (1+1, 1+0) = (2, 1)
+      // 3x3 area: x from 1 to 3, y from 0 to 2
+      const player = createPlayer({ heldPowerup: 'bomb', x: 1.5, y: 1.5, facing: 'E' });
+      const map = createBombMap();
+      const ctx = {
+        player,
+        map,
+        buriedItems: new Map<string, ItemType>(),
+        groundItems: new Map<string, ItemType>(),
+      };
+
+      const result = activatePowerup(ctx);
+
+      expect(result.player.heldPowerup).toBeNull();
+      expect(result.cellsChanged).toHaveLength(9);
+      for (let y = 0; y <= 2; y++) {
+        for (let x = 1; x <= 3; x++) {
+          expect(result.cellsChanged).toContainEqual({ x, y, cellType: 'walkable' });
+        }
+      }
+
+      expect(result.publicEvents).toContainEqual({
+        type: 'bomb_detonate',
+        playerId: 'p1',
+        cells: expect.arrayContaining(
+          Array.from({ length: 9 }).map((_, i) => ({
+            x: 1 + (i % 3),
+            y: Math.floor(i / 3),
+          }))
+        ),
+      });
+      expect(result.publicEvents).toContainEqual({
+        type: 'powerup_activate',
+        playerId: 'p1',
+        powerup: 'bomb',
+      });
+    });
+
+    it('auto-collects nuggets and emits pickup', () => {
+      const player = createPlayer({ heldPowerup: 'bomb', x: 1.5, y: 1.5, facing: 'E', score: 0 });
+      const map = createBombMap();
+      const buriedItems = new Map<string, ItemType>();
+      buriedItems.set('2,1', 'nugget'); // Center of 3x3
+
+      const ctx = {
+        player,
+        map,
+        buriedItems,
+        groundItems: new Map<string, ItemType>(),
+      };
+
+      const result = activatePowerup(ctx);
+
+      expect(result.player.score).toBe(10);
+      expect(ctx.buriedItems.has('2,1')).toBe(false);
+      expect(result.publicEvents).toContainEqual({
+        type: 'pickup',
+        playerId: 'p1',
+        itemType: 'nugget',
+      });
+    });
+
+    it('moves treasure to ground items', () => {
+      const player = createPlayer({ heldPowerup: 'bomb', x: 1.5, y: 1.5, facing: 'E' });
+      const map = createBombMap();
+      const buriedItems = new Map<string, ItemType>();
+      const groundItems = new Map<string, ItemType>();
+      buriedItems.set('2,1', 'treasure');
+
+      const ctx = {
+        player,
+        map,
+        buriedItems,
+        groundItems,
+      };
+
+      activatePowerup(ctx);
+
+      expect(ctx.buriedItems.has('2,1')).toBe(false);
+      expect(ctx.groundItems.get('2,1')).toBe('treasure');
+    });
+
+    it('collects powerup if held slot is empty', () => {
+      const player = createPlayer({ heldPowerup: 'bomb', x: 1.5, y: 1.5, facing: 'E' });
+      const map = createBombMap();
+      const buriedItems = new Map<string, ItemType>();
+      buriedItems.set('2,1', 'shovel');
+
+      const ctx = {
+        player,
+        map,
+        buriedItems,
+        groundItems: new Map<string, ItemType>(),
+      };
+
+      const result = activatePowerup(ctx);
+
+      // Player used the bomb, so slot became empty, then picked up shovel
+      expect(result.player.heldPowerup).toBe('shovel');
+      expect(ctx.buriedItems.has('2,1')).toBe(false);
+      expect(result.publicEvents).toContainEqual({
+        type: 'pickup',
+        playerId: 'p1',
+        itemType: 'shovel',
+      });
+    });
+
+    it('moves powerup to ground items if multiple powerups unearthed and slot fills up', () => {
+      const player = createPlayer({ heldPowerup: 'bomb', x: 1.5, y: 1.5, facing: 'E' });
+      const map = createBombMap();
+      const buriedItems = new Map<string, ItemType>();
+      const groundItems = new Map<string, ItemType>();
+      
+      // Put two powerups in the blast zone
+      buriedItems.set('2,1', 'shovel');
+      buriedItems.set('3,1', 'compass');
+
+      const ctx = {
+        player,
+        map,
+        buriedItems,
+        groundItems,
+      };
+
+      const result = activatePowerup(ctx);
+
+      expect(ctx.buriedItems.has('2,1')).toBe(false);
+      expect(ctx.buriedItems.has('3,1')).toBe(false);
+      
+      // One should be held, one on the ground
+      // Note: order is dependent on Map traversal, but we can just check conditions
+      expect(result.player.heldPowerup).not.toBeNull();
+      expect(result.player.heldPowerup).not.toBe('bomb'); // slot was emptied, then refilled
+      expect(groundItems.size).toBe(1);
+      
+      const groundItemKeys = Array.from(groundItems.keys());
+      const groundItemTypes = Array.from(groundItems.values());
+      const heldPowerup = result.player.heldPowerup;
+      
+      expect(heldPowerup === 'shovel' || heldPowerup === 'compass').toBe(true);
+      expect(groundItemTypes[0] === 'shovel' || groundItemTypes[0] === 'compass').toBe(true);
+      expect(groundItemTypes[0]).not.toBe(heldPowerup);
+    });
+
+    it('skips off-map cells and does not flip already walkable cells', () => {
+      const player = createPlayer({ heldPowerup: 'bomb', x: 0.5, y: 0.5, facing: 'N' });
+      // Target is (0, -1) which is off-map. 3x3 is x=-1..1, y=-2..0. 
+      // Only (0,0), (1,0) are on-map.
+      const map = createBombMap();
+      map.cells[0][0] = 'walkable'; // already walkable
+
+      const ctx = {
+        player,
+        map,
+        buriedItems: new Map<string, ItemType>(),
+        groundItems: new Map<string, ItemType>(),
+      };
+
+      const result = activatePowerup(ctx);
+
+      expect(result.cellsChanged).toHaveLength(1);
+      expect(result.cellsChanged).toContainEqual({ x: 1, y: 0, cellType: 'walkable' });
+      
+      expect(result.publicEvents).toContainEqual(
+        expect.objectContaining({
+          type: 'bomb_detonate',
+          playerId: 'p1',
+          cells: [{ x: 1, y: 0 }],
+        })
+      );
+    });
+  });
 });

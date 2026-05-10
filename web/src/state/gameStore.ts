@@ -4,7 +4,13 @@ import type {
   ServerMessage,
   PlayerSnapshot,
   ItemType,
+  PlayerBuffs,
+  CompassResult,
 } from '@treasure-hunt/protocol';
+
+export type StoredCompassResult = Exclude<CompassResult, { kind: 'no_target' }> & {
+  expiresAtMs: number;
+};
 
 interface GameState {
   matchId: string | null;
@@ -19,7 +25,13 @@ interface GameState {
   winnerId: string | null;
   groundItems: Array<{ x: number; y: number; item: ItemType }>;
   heldPowerup: PlayerSnapshot['heldPowerup'];
+  buffs: PlayerBuffs;
+  compassResult: StoredCompassResult | null;
 }
+
+const defaultBuffs: PlayerBuffs = {
+  fasterShovelTicksRemaining: 0,
+};
 
 export const useGameStore = create<GameState>()(() => ({
   matchId: null,
@@ -34,6 +46,8 @@ export const useGameStore = create<GameState>()(() => ({
   winnerId: null,
   groundItems: [],
   heldPowerup: null,
+  buffs: defaultBuffs,
+  compassResult: null,
 }));
 
 export function initFromServerMsg(
@@ -62,6 +76,8 @@ export function initFromServerMsg(
     winnerId: null,
     groundItems: [],
     heldPowerup: null,
+    buffs: defaultBuffs,
+    compassResult: null,
   });
 }
 
@@ -77,14 +93,24 @@ export function applyDiff(
 
     let matchEnded = prev.matchEnded;
     let winnerId = prev.winnerId;
+    let compassResult = prev.compassResult;
+
     const myPlayer = diff.players.find((p: PlayerSnapshot) => p.id === myPlayerId);
     const score = myPlayer?.score ?? prev.score;
     const heldPowerup = myPlayer ? myPlayer.heldPowerup : prev.heldPowerup;
+    const buffs = myPlayer ? myPlayer.buffs : prev.buffs;
 
     for (const event of diff.events) {
       if (event.type === 'match_end') {
         matchEnded = true;
         winnerId = event.winnerId;
+      } else if (event.type === 'compass_result' && event.playerId === myPlayerId) {
+        if (event.result.kind !== 'no_target') {
+          compassResult = {
+            ...event.result,
+            expiresAtMs: Date.now() + 5000,
+          };
+        }
       }
     }
 
@@ -97,6 +123,12 @@ export function applyDiff(
       winnerId,
       groundItems: diff.groundItems ?? prev.groundItems,
       heldPowerup,
+      buffs,
+      compassResult,
     };
   });
+}
+
+export function expireCompassResult(): void {
+  useGameStore.setState({ compassResult: null });
 }

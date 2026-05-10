@@ -20,6 +20,7 @@ export default function Match() {
   const winnerId = useGameStore((s) => s.winnerId);
   const playerId = useGameStore((s) => s.playerId);
   const heldPowerup = useGameStore((s) => s.heldPowerup);
+  const buffs = useGameStore((s) => s.buffs);
 
   useEffect(() => {
     connect(id!);
@@ -101,7 +102,10 @@ export default function Match() {
       </div>
 
       <div style={{ width: '640px' }}>
-        <PowerupSlot heldPowerup={heldPowerup} />
+        <PowerupSlot
+          heldPowerup={heldPowerup}
+          disabled={heldPowerup === 'shovel' && buffs.fasterShovelTicksRemaining > 0}
+        />
       </div>
 
       <PixiCanvas />

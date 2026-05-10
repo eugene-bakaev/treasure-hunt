@@ -1,4 +1,4 @@
-import { PlayerState } from '../physics/movement.js';
+import { facingVec, PlayerState } from '../physics/movement.js';
 import { MapGrid } from '../map/types.js';
 import { ItemType, CellChange, MatchEvent, CompassResult } from '@treasure-hunt/protocol';
 
@@ -85,6 +85,77 @@ export function activatePowerup(ctx: ActivationContext): ActivationResult {
           result,
         },
       ],
+    };
+  }
+
+  if (player.heldPowerup === 'bomb') {
+    const { dx, dy } = facingVec(player.facing);
+    const targetX = Math.floor(player.x) + dx;
+    const targetY = Math.floor(player.y) + dy;
+
+    const newlyWalkable: { x: number; y: number }[] = [];
+    const currentPlayer = {
+      ...player,
+      heldPowerup: null as 'shovel' | 'compass' | 'bomb' | null,
+    };
+
+    for (let y = targetY - 1; y <= targetY + 1; y++) {
+      for (let x = targetX - 1; x <= targetX + 1; x++) {
+        if (x < 0 || y < 0 || x >= ctx.map.width || y >= ctx.map.height) {
+          continue;
+        }
+
+        if (ctx.map.cells[y]![x] === 'rock') {
+          cellsChanged.push({ x, y, cellType: 'walkable' });
+          newlyWalkable.push({ x, y });
+        }
+
+        const key = `${x},${y}`;
+        const item = ctx.buriedItems.get(key);
+        if (item) {
+          ctx.buriedItems.delete(key);
+          if (item === 'nugget') {
+            currentPlayer.score += 10;
+            publicEvents.push({
+              type: 'pickup',
+              playerId: player.id,
+              itemType: 'nugget',
+            });
+          } else if (item === 'treasure') {
+            ctx.groundItems.set(key, 'treasure');
+          } else {
+            // Powerup
+            if (currentPlayer.heldPowerup === null) {
+              currentPlayer.heldPowerup = item as 'shovel' | 'compass' | 'bomb';
+              publicEvents.push({
+                type: 'pickup',
+                playerId: player.id,
+                itemType: item,
+              });
+            } else {
+              ctx.groundItems.set(key, item);
+            }
+          }
+        }
+      }
+    }
+
+    publicEvents.push({
+      type: 'powerup_activate',
+      playerId: player.id,
+      powerup: 'bomb',
+    });
+    publicEvents.push({
+      type: 'bomb_detonate',
+      playerId: player.id,
+      cells: newlyWalkable,
+    });
+
+    return {
+      player: currentPlayer,
+      cellsChanged,
+      publicEvents,
+      privateEvents,
     };
   }
 
