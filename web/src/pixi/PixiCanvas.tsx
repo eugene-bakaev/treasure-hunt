@@ -82,6 +82,7 @@ export default function PixiCanvas() {
         changed.set(k, v);
       }
       mapRendRef.current?.updateCells(changed);
+      mapRendRef.current?.updateGroundItems(state.groundItems);
     });
     return unsub;
   }, []);
