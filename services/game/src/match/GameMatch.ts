@@ -221,7 +221,17 @@ export class GameMatch {
       const groundKey = `${Math.floor(state.x)},${Math.floor(state.y)}`;
       const groundItem = this.groundItems.get(groundKey);
       if (groundItem !== undefined) {
-        if (groundItem === 'nugget') {
+        if (groundItem === 'treasure') {
+          state = { ...state, score: state.score + 100 };
+          this.groundItems.delete(groundKey);
+          events.push({ type: 'pickup', playerId, itemType: 'treasure' });
+          events.push({
+            type: 'match_end',
+            winnerId: playerId,
+            scores: { [playerId]: state.score },
+          });
+          this.ended = true;
+        } else if (groundItem === 'nugget') {
           state = { ...state, score: state.score + 10 };
           this.groundItems.delete(groundKey);
           events.push({ type: 'pickup', playerId, itemType: 'nugget' });

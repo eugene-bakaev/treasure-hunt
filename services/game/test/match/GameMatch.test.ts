@@ -246,6 +246,34 @@ describe('GameMatch item pickups', () => {
     expect(match['groundItems'].get(groundKey)).toBe('bomb');
   });
 
+  it('walking over a treasure ground item awards 100 pts and ends match', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    const groundKey = `${Math.floor(alice.x)},${Math.floor(alice.y)}`;
+    match['groundItems'].set(groundKey, 'treasure');
+
+    match.tickOnce();
+
+    const diff = [...emitted].reverse().find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    expect(diff?.type).toBe('player_diff');
+    if (diff?.type === 'player_diff') {
+      const player = diff.diff.players.find((p) => p.id === 'alice');
+      expect(player?.score).toBe(100);
+      expect(match['groundItems'].has(groundKey)).toBe(false);
+      expect(diff.diff.events).toContainEqual({
+        type: 'pickup', playerId: 'alice', itemType: 'treasure',
+      });
+      expect(diff.diff.events).toContainEqual({
+        type: 'match_end',
+        winnerId: 'alice',
+        scores: expect.any(Object),
+      });
+      expect(match['ended']).toBe(true);
+    }
+  });
+
   it('state_diff includes groundItems array', () => {
     const { match, emitted } = makeTwoPlayerMatch();
     const alice = match['players'].get('alice')!;
