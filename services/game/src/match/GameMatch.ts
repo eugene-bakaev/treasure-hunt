@@ -20,6 +20,12 @@ import {
 
 export type MatchEventEmitter = (msg: GameToGatewayMsg) => void;
 
+type PowerupItemType = Exclude<ItemType, 'treasure' | 'nugget'>;
+
+function isPowerup(item: ItemType): item is PowerupItemType {
+  return item !== 'treasure' && item !== 'nugget';
+}
+
 export class GameMatch {
   private readonly matchId: string;
   private readonly map: MapGrid;
@@ -167,7 +173,7 @@ export class GameMatch {
           } else {
             // powerup: shovel | compass | bomb
             if (state.heldPowerup === null) {
-              state = { ...state, heldPowerup: buried as 'shovel' | 'compass' | 'bomb' };
+              state = { ...state, heldPowerup: buried as PowerupItemType };
               events.push({ type: 'pickup', playerId, itemType: buried });
             } else {
               this.groundItems.set(buriedKey, buried);
@@ -192,7 +198,7 @@ export class GameMatch {
           this.groundItems.delete(groundKey);
           events.push({ type: 'pickup', playerId, itemType: 'nugget' });
         } else if (state.heldPowerup === null) {
-          state = { ...state, heldPowerup: groundItem as 'shovel' | 'compass' | 'bomb' };
+          state = { ...state, heldPowerup: groundItem as PowerupItemType };
           this.groundItems.delete(groundKey);
           events.push({ type: 'pickup', playerId, itemType: groundItem });
         }
