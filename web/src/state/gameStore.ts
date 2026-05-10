@@ -3,6 +3,7 @@ import type {
   CellType,
   ServerMessage,
   PlayerSnapshot,
+  ItemType,
 } from '@treasure-hunt/protocol';
 
 interface GameState {
@@ -16,6 +17,8 @@ interface GameState {
   score: number;
   matchEnded: boolean;
   winnerId: string | null;
+  groundItems: Array<{ x: number; y: number; item: ItemType }>;
+  heldPowerup: 'shovel' | 'compass' | 'bomb' | null;
 }
 
 export const useGameStore = create<GameState>()(() => ({
@@ -29,13 +32,14 @@ export const useGameStore = create<GameState>()(() => ({
   score: 0,
   matchEnded: false,
   winnerId: null,
+  groundItems: [],
+  heldPowerup: null,
 }));
 
 export function initFromServerMsg(
   msg: Extract<ServerMessage, { type: 'init' }>,
 ): void {
   const cells = new Map<string, CellType>();
-  // Initialise all cells as rock, then set walkable ones
   for (let y = 0; y < msg.mapHeight; y++) {
     for (let x = 0; x < msg.mapWidth; x++) {
       cells.set(`${x},${y}`, 'rock');
@@ -56,6 +60,8 @@ export function initFromServerMsg(
     score: 0,
     matchEnded: false,
     winnerId: null,
+    groundItems: [],
+    heldPowerup: null,
   });
 }
 
@@ -73,6 +79,7 @@ export function applyDiff(
     let winnerId = prev.winnerId;
     const myPlayer = diff.players.find((p: PlayerSnapshot) => p.id === myPlayerId);
     const score = myPlayer?.score ?? prev.score;
+    const heldPowerup = myPlayer?.heldPowerup ?? prev.heldPowerup;
 
     for (const event of diff.events) {
       if (event.type === 'match_end') {
@@ -88,6 +95,8 @@ export function applyDiff(
       score,
       matchEnded,
       winnerId,
+      groundItems: diff.groundItems,
+      heldPowerup,
     };
   });
 }

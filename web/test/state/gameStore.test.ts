@@ -2,7 +2,6 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { useGameStore, initFromServerMsg, applyDiff } from '../../src/state/gameStore.js';
 import type { ServerMessage } from '@treasure-hunt/protocol';
 
-// Reset store between tests by re-importing (zustand stores are singletons)
 beforeEach(() => {
   useGameStore.setState({
     matchId: null,
@@ -15,6 +14,8 @@ beforeEach(() => {
     score: 0,
     matchEnded: false,
     winnerId: null,
+    groundItems: [],
+    heldPowerup: null,
   });
 });
 
@@ -38,6 +39,8 @@ describe('gameStore', () => {
     expect(state.mapWidth).toBe(40);
     expect(state.cells.get('1,1')).toBe('walkable');
     expect(state.cells.get('0,0')).toBe('rock');
+    expect(state.groundItems).toEqual([]);
+    expect(state.heldPowerup).toBeNull();
   });
 
   it('applies cell changes from a state_diff', () => {
@@ -47,9 +50,10 @@ describe('gameStore', () => {
       type: 'state_diff',
       tick: 1,
       cellsChanged: [{ x: 5, y: 5, cellType: 'walkable' }],
-      players: [{ id: 'alice', x: 2.5, y: 2.5, facing: 'E', digProgress: -1, score: 0 }],
+      players: [{ id: 'alice', x: 2.5, y: 2.5, facing: 'E', digProgress: -1, score: 0, heldPowerup: null }],
       detector: 42,
       events: [],
+      groundItems: [],
     };
     applyDiff(diff, 'alice');
 
@@ -66,9 +70,10 @@ describe('gameStore', () => {
       type: 'state_diff',
       tick: 2,
       cellsChanged: [],
-      players: [{ id: 'alice', x: 2.5, y: 2.5, facing: 'E', digProgress: -1, score: 100 }],
+      players: [{ id: 'alice', x: 2.5, y: 2.5, facing: 'E', digProgress: -1, score: 100, heldPowerup: null }],
       detector: 0,
       events: [{ type: 'match_end', winnerId: 'alice', scores: { alice: 100 } }],
+      groundItems: [],
     };
     applyDiff(diff, 'alice');
 
@@ -76,5 +81,41 @@ describe('gameStore', () => {
     expect(state.matchEnded).toBe(true);
     expect(state.winnerId).toBe('alice');
     expect(state.score).toBe(100);
+  });
+
+  it('updates groundItems from state_diff', () => {
+    initFromServerMsg(initMsg);
+
+    const diff: Extract<ServerMessage, { type: 'state_diff' }> = {
+      type: 'state_diff',
+      tick: 3,
+      cellsChanged: [],
+      players: [{ id: 'alice', x: 2.5, y: 2.5, facing: 'E', digProgress: -1, score: 0, heldPowerup: null }],
+      detector: 0,
+      events: [],
+      groundItems: [{ x: 10, y: 15, item: 'shovel' }],
+    };
+    applyDiff(diff, 'alice');
+
+    const state = useGameStore.getState();
+    expect(state.groundItems).toEqual([{ x: 10, y: 15, item: 'shovel' }]);
+  });
+
+  it('reads heldPowerup from own PlayerSnapshot', () => {
+    initFromServerMsg(initMsg);
+
+    const diff: Extract<ServerMessage, { type: 'state_diff' }> = {
+      type: 'state_diff',
+      tick: 4,
+      cellsChanged: [],
+      players: [{ id: 'alice', x: 2.5, y: 2.5, facing: 'E', digProgress: -1, score: 0, heldPowerup: 'compass' }],
+      detector: 0,
+      events: [],
+      groundItems: [],
+    };
+    applyDiff(diff, 'alice');
+
+    const state = useGameStore.getState();
+    expect(state.heldPowerup).toBe('compass');
   });
 });
