@@ -17,6 +17,7 @@ import {
   advanceDig,
   isDugComplete,
 } from './digSystem.js';
+import { activatePowerup } from './activationSystem.js';
 
 export type MatchEventEmitter = (msg: GameToGatewayMsg) => void;
 
@@ -122,6 +123,7 @@ export class GameMatch {
 
     const cellsChanged: CellChange[] = [];
     const events: MatchEvent[] = [];
+    const playerPrivateEvents = new Map<string, MatchEvent[]>();
 
     // Snapshot ground items at the start of the tick (before pickups modify the map)
     const groundItemsArray = [...this.groundItems.entries()].map(([key, item]) => {
@@ -132,10 +134,27 @@ export class GameMatch {
     for (const [playerId, player] of this.players) {
       const queue = this.intentQueues.get(playerId) ?? [];
       this.intentQueues.set(playerId, []);
+      playerPrivateEvents.set(playerId, []);
 
       let state = player;
 
-      // Drain intents
+      // Drain intents — Pass 1: Powerup Activations
+      for (const intent of queue) {
+        if (intent.type === 'activate') {
+          const result = activatePowerup({
+            player: state,
+            map: this.map,
+            buriedItems: this.buriedItems,
+            groundItems: this.groundItems,
+          });
+          state = result.player;
+          cellsChanged.push(...result.cellsChanged);
+          events.push(...result.publicEvents);
+          playerPrivateEvents.get(playerId)!.push(...result.privateEvents);
+        }
+      }
+
+      // Drain intents — Pass 2: Movement and Digging
       for (const intent of queue) {
         if (intent.type === 'move') {
           state = { ...state, moveDir: intent.dir, facing: intent.dir };
@@ -244,7 +263,7 @@ export class GameMatch {
         cellsChanged,
         players,
         detector,
-        events,
+        events: [...events, ...(playerPrivateEvents.get(playerId) ?? [])],
         groundItems: groundItemsArray,
       };
       this.emit({ type: 'player_diff', playerId, diff });

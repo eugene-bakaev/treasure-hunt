@@ -322,4 +322,126 @@ describe('GameMatch buffs', () => {
     }
     expect(match['players'].get('alice')?.fasterShovelTicksRemaining).toBe(0);
   });
+
+  it('activates held powerup when activate intent is queued', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    match['players'].set('alice', {
+      ...alice,
+      heldPowerup: 'shovel',
+      fasterShovelTicksRemaining: 0,
+    });
+
+    match.queueIntent('alice', { type: 'activate' });
+    match.tickOnce();
+
+    const diff = [...emitted].reverse().find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    expect(diff?.type).toBe('player_diff');
+    if (diff?.type === 'player_diff') {
+      const player = diff.diff.players.find((p) => p.id === 'alice');
+      expect(player?.heldPowerup).toBeNull();
+      expect(player?.buffs.fasterShovelTicksRemaining).toBeGreaterThan(0);
+      expect(diff.diff.events).toContainEqual({
+        type: 'powerup_activate',
+        playerId: 'alice',
+        powerup: 'shovel',
+      });
+    }
+  });
+
+  it('only activates once if multiple activate intents are queued in one tick', () => {
+    const { match } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    match['players'].set('alice', {
+      ...alice,
+      heldPowerup: 'shovel',
+      fasterShovelTicksRemaining: 0,
+    });
+
+    // Queue two activates. The second should be a no-op because shovel is gone.
+    match.queueIntent('alice', { type: 'activate' });
+    match.queueIntent('alice', { type: 'activate' });
+    match.tickOnce();
+
+    const aliceState = match['players'].get('alice')!;
+    expect(aliceState.heldPowerup).toBeNull();
+    // It should have exactly the initial buff amount (minus 1 for the tick decrement if it happens in the same tick)
+    // Actually GameMatch.ts decrements it AFTER activating in tickOnce.
+    // FASTER_SHOVEL_TICKS = 450. After decrement: 449.
+    expect(aliceState.fasterShovelTicksRemaining).toBe(449);
+  });
+
+  it('processes activate intents before dig intents in the same tick (two-pass)', () => {
+    const { match } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    // Alice is at (2.5, 2.5). There is rock at (2, 2) which is West then North.
+    // Actually let's just force Alice to face a rock.
+    match['map'].cells[2][1] = 'rock'; // (1, 2) is West of (2.5, 2.5)
+    match['players'].set('alice', {
+      ...alice,
+      x: 2.5,
+      y: 2.5,
+      facing: 'W',
+      heldPowerup: 'shovel',
+      fasterShovelTicksRemaining: 0,
+    });
+
+    // Queue dig then activate. In one-pass, dig would start with 24 ticks.
+    // In two-pass, activate happens first, so dig starts with 12 ticks.
+    match.queueIntent('alice', { type: 'dig' });
+    match.queueIntent('alice', { type: 'activate' });
+    match.tickOnce();
+
+    const aliceState = match['players'].get('alice')!;
+    expect(aliceState.heldPowerup).toBeNull();
+    expect(aliceState.fasterShovelTicksRemaining).toBe(449);
+    // DIG_TICKS is 24. Buffed should be 12.
+    // In tickOnce:
+    // 1. Drains intents (startDig sets it to 12)
+    // 2. advanceDig decrements it to 11
+    expect(aliceState.digTicksRemaining).toBe(11);
+  });
+
+  it('routes private events only to the player who activated', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    match['players'].set('alice', {
+      ...alice,
+      heldPowerup: 'compass',
+    });
+
+    match.queueIntent('alice', { type: 'activate' });
+    match.tickOnce();
+
+    const aliceDiff = emitted.find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    const bobDiff = emitted.find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'bob',
+    );
+
+    expect(aliceDiff?.type).toBe('player_diff');
+    expect(bobDiff?.type).toBe('player_diff');
+
+    if (aliceDiff?.type === 'player_diff' && bobDiff?.type === 'player_diff') {
+      // Alice should see the compass_result
+      expect(aliceDiff.diff.events).toContainEqual(
+        expect.objectContaining({ type: 'compass_result', playerId: 'alice' }),
+      );
+      // Bob should NOT see the compass_result
+      expect(bobDiff.diff.events).not.toContainEqual(
+        expect.objectContaining({ type: 'compass_result', playerId: 'alice' }),
+      );
+      // Both should see the public powerup_activate event
+      const activateEvent = {
+        type: 'powerup_activate',
+        playerId: 'alice',
+        powerup: 'compass',
+      };
+      expect(aliceDiff.diff.events).toContainEqual(activateEvent);
+      expect(bobDiff.diff.events).toContainEqual(activateEvent);
+    }
+  });
 });

@@ -28,7 +28,11 @@ export function startDig(player: PlayerState, map: MapGrid): PlayerState {
   }
   if (map.cells[target.y]![target.x] !== 'rock') return player;
 
-  return { ...player, digTarget: target, digTicksRemaining: DIG_TICKS };
+  const duration = player.fasterShovelTicksRemaining > 0
+    ? Math.ceil(DIG_TICKS / 2)
+    : DIG_TICKS;
+
+  return { ...player, digTarget: target, digTicksRemaining: duration };
 }
 
 export function advanceDig(player: PlayerState): PlayerState {

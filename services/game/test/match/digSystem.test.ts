@@ -65,6 +65,28 @@ describe('digSystem', () => {
       const after = startDig(player, map);
       expect(after.digTicksRemaining).toBe(10); // unchanged
     });
+
+    it('halves DIG_TICKS when Faster Shovel buff is active', () => {
+      const player = makePlayer({
+        x: 1.5,
+        y: 1.5,
+        facing: 'N',
+        fasterShovelTicksRemaining: 100,
+      });
+      const after = startDig(player, map);
+      expect(after.digTicksRemaining).toBe(Math.ceil(DIG_TICKS / 2));
+    });
+
+    it('uses full DIG_TICKS when Faster Shovel buff is not active', () => {
+      const player = makePlayer({
+        x: 1.5,
+        y: 1.5,
+        facing: 'N',
+        fasterShovelTicksRemaining: 0,
+      });
+      const after = startDig(player, map);
+      expect(after.digTicksRemaining).toBe(DIG_TICKS);
+    });
   });
 
   describe('advanceDig', () => {
