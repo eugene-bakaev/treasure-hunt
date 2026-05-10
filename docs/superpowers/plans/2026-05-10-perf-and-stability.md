@@ -27,30 +27,30 @@ Address critical freezes reported by the user and fix match stability issues whe
 ## Implementation Steps
 
 ### Task 1: Persistent Player IDs (Web & Gateway)
-- [ ] **Step 1: Web `socket.ts`**
+- [x] **Step 1: Web `socket.ts`**
   - Read/generate `playerId` from `localStorage`.
   - Append `&playerId=...` to `WS_BASE`.
-- [ ] **Step 2: Gateway `clientHandler.ts`**
+- [x] **Step 2: Gateway `clientHandler.ts`**
   - Extract `playerId` from query params.
   - Remove UUID generation from the connection handler.
 
 ### Task 2: Game Match Stability
-- [ ] **Step 1: `GameMatch.ts`**
+- [x] **Step 1: `GameMatch.ts`**
   - Update `addPlayer` to handle re-joining existing IDs even if `players.size === 2`.
   - Ensure `emitInit` is always called for the re-joining player.
 
 ### Task 3: Map Rendering Optimization
-- [ ] **Step 1: `MapRenderer.ts`**
+- [x] **Step 1: `MapRenderer.ts`**
   - Refactor to use a single `mapGfx` object for all cells.
   - `initMap` draws all cells once.
   - `updateCells` takes an array of changes and surgically draws them.
-- [ ] **Step 2: `PixiCanvas.tsx`**
+- [x] **Step 2: `PixiCanvas.tsx`**
   - Track `lastTick` in a `useRef`.
   - Inside the subscription, only call `updateCells` if the tick has changed and there are actual changes in the store's "last diff" (might need to expose the last diff in the store or just pass the whole state and let renderer decide).
   - Actually, `gameStore.applyDiff` already has `cellsChanged`. We can expose the `lastCellsChanged` in the store.
 
 ### Task 4: Server Performance Refactor (Restore)
-- [ ] **Step 1: `GameMatch.ts`**
+- [x] **Step 1: `GameMatch.ts`**
   - Move `buriedPositions` and `playersSnapshot` out of the loop.
 
 ## Verification
