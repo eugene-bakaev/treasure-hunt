@@ -190,6 +190,14 @@ export class GameMatch {
         state = applyMovement(state, this.map);
       }
 
+      // Decrement buffs
+      if (state.fasterShovelTicksRemaining > 0) {
+        state = {
+          ...state,
+          fasterShovelTicksRemaining: state.fasterShovelTicksRemaining - 1,
+        };
+      }
+
       // Ground pickup
       const groundKey = `${Math.floor(state.x)},${Math.floor(state.y)}`;
       const groundItem = this.groundItems.get(groundKey);

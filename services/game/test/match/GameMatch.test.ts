@@ -279,3 +279,47 @@ describe('GameMatch item pickups', () => {
     }
   });
 });
+
+describe('GameMatch buffs', () => {
+  it('decrements fasterShovelTicksRemaining each tick', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    match['players'].set('alice', {
+      ...alice,
+      fasterShovelTicksRemaining: 10,
+    });
+
+    match.tickOnce();
+
+    const diff = [...emitted].reverse().find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    expect(diff?.type).toBe('player_diff');
+    if (diff?.type === 'player_diff') {
+      const player = diff.diff.players.find((p) => p.id === 'alice');
+      expect(player?.buffs.fasterShovelTicksRemaining).toBe(9);
+    }
+    expect(match['players'].get('alice')?.fasterShovelTicksRemaining).toBe(9);
+  });
+
+  it('floors fasterShovelTicksRemaining at 0', () => {
+    const { match, emitted } = makeTwoPlayerMatch();
+    const alice = match['players'].get('alice')!;
+    match['players'].set('alice', {
+      ...alice,
+      fasterShovelTicksRemaining: 0,
+    });
+
+    match.tickOnce();
+
+    const diff = [...emitted].reverse().find(
+      (m) => m.type === 'player_diff' && (m as { playerId: string }).playerId === 'alice',
+    );
+    expect(diff?.type).toBe('player_diff');
+    if (diff?.type === 'player_diff') {
+      const player = diff.diff.players.find((p) => p.id === 'alice');
+      expect(player?.buffs.fasterShovelTicksRemaining).toBe(0);
+    }
+    expect(match['players'].get('alice')?.fasterShovelTicksRemaining).toBe(0);
+  });
+});
