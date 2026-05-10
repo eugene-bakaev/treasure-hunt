@@ -57,6 +57,9 @@ export class MapRenderer {
   }
 
   updateGroundItems(items: Array<{ x: number; y: number; item: ItemType }>): void {
+    for (const child of this.groundContainer.children) {
+      (child as Graphics).destroy();
+    }
     this.groundContainer.removeChildren();
     for (const { x, y, item } of items) {
       if (item === 'treasure') continue;
