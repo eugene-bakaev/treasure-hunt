@@ -5,6 +5,7 @@ interface UseInputCallbacks {
   onMove: (dir: Facing) => void;
   onStop: () => void;
   onDig: () => void;
+  onActivate: () => void;
 }
 
 const KEY_TO_DIR: Record<string, Facing> = {
@@ -23,8 +24,9 @@ const KEY_TO_DIR: Record<string, Facing> = {
 };
 
 const DIG_KEYS = new Set(['j', 'J']);
+const ACTIVATE_KEYS = new Set([' ']);
 
-export function useInput({ onMove, onStop, onDig }: UseInputCallbacks): void {
+export function useInput({ onMove, onStop, onDig, onActivate }: UseInputCallbacks): void {
   const heldKey = useRef<string | null>(null);
 
   useEffect(() => {
@@ -34,6 +36,12 @@ export function useInput({ onMove, onStop, onDig }: UseInputCallbacks): void {
       if (DIG_KEYS.has(e.key)) {
         e.preventDefault();
         onDig();
+        return;
+      }
+
+      if (ACTIVATE_KEYS.has(e.key)) {
+        e.preventDefault();
+        onActivate();
         return;
       }
 
@@ -58,5 +66,5 @@ export function useInput({ onMove, onStop, onDig }: UseInputCallbacks): void {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [onMove, onStop, onDig]);
+  }, [onMove, onStop, onDig, onActivate]);
 }

@@ -47,4 +47,34 @@ describe('useInput', () => {
 
     expect(onDig).toHaveBeenCalled();
   });
+
+  it('calls onActivate when Space is pressed', () => {
+    const onMove = vi.fn();
+    const onStop = vi.fn();
+    const onDig = vi.fn();
+    const onActivate = vi.fn();
+
+    renderHook(() => useInput({ onMove, onStop, onDig, onActivate }));
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    });
+
+    expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onActivate on repeat Space keydown', () => {
+    const onMove = vi.fn();
+    const onStop = vi.fn();
+    const onDig = vi.fn();
+    const onActivate = vi.fn();
+
+    renderHook(() => useInput({ onMove, onStop, onDig, onActivate }));
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, repeat: true }));
+    });
+
+    expect(onActivate).not.toHaveBeenCalled();
+  });
 });

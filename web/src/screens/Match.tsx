@@ -39,8 +39,9 @@ export default function Match() {
   );
   const onStop = useCallback(() => sendIntent({ type: 'stop' }), []);
   const onDig = useCallback(() => sendIntent({ type: 'dig' }), []);
+  const onActivate = useCallback(() => sendIntent({ type: 'activate' }), []);
 
-  useInput({ onMove, onStop, onDig });
+  useInput({ onMove, onStop, onDig, onActivate });
 
   const joinCode = (location.state as { joinCode?: string } | null)?.joinCode;
   const inviteUrl = joinCode
