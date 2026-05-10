@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import PixiCanvas from '../pixi/PixiCanvas.js';
 import DetectorGauge from '../hud/DetectorGauge.js';
 import Scoreboard from '../hud/Scoreboard.js';
+import PowerupSlot from '../hud/PowerupSlot.js';
 import { useGameStore } from '../state/gameStore.js';
 import { useInput } from '../hooks/useInput.js';
 import { connect, disconnect, sendIntent } from '../net/socket.js';
@@ -18,6 +19,7 @@ export default function Match() {
   const matchEnded = useGameStore((s) => s.matchEnded);
   const winnerId = useGameStore((s) => s.winnerId);
   const playerId = useGameStore((s) => s.playerId);
+  const heldPowerup = useGameStore((s) => s.heldPowerup);
 
   useEffect(() => {
     connect(id!);
@@ -95,6 +97,10 @@ export default function Match() {
           matchEnded={matchEnded}
           isWinner={matchEnded && winnerId === playerId}
         />
+      </div>
+
+      <div style={{ width: '640px' }}>
+        <PowerupSlot heldPowerup={heldPowerup} />
       </div>
 
       <PixiCanvas />
