@@ -14,14 +14,20 @@
   },
   "dependencies": {
     "@treasure-hunt/protocol": "workspace:*",
+    "@apollo/server": "^4.11.0",
+    "cors": "^2.8.5",
     "express": "^4.21.0",
+    "graphql": "^16.9.0",
     "http-proxy-middleware": "^4.0.0",
+    "pg": "^8.13.0",
     "uuid": "^10.0.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^22.7.0",
+    "@types/pg": "^8.11.10",
     "@types/supertest": "^6.0.2",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.12",

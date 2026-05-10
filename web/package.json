@@ -9,10 +9,14 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src test"
+    "lint": "eslint src test",
+    "codegen": "graphql-codegen"
   },
   "dependencies": {
+    "@apollo/client": "^3.11.0",
+    "@graphql-typed-document-node/core": "^3.2.0",
     "@treasure-hunt/protocol": "workspace:*",
+    "graphql": "^16.9.0",
     "pixi.js": "^8.4.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
@@ -20,8 +24,10 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@testing-library/react": "^16.0.0",
+    "@graphql-codegen/cli": "^5.0.0",
+    "@graphql-codegen/client-preset": "^4.3.0",
     "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",

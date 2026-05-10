@@ -35,13 +35,14 @@ export function attachWebSocket(server: http.Server): void {
     const url = new URL(req.url ?? '/', 'ws://x');
     const matchId = url.searchParams.get('matchId') ?? 'dev';
     const playerId = url.searchParams.get('playerId') ?? uuidv4();
+    const nickname = url.searchParams.get('nickname') ?? 'Anonymous';
     clients.set(playerId, ws);
 
     ws.on('error', (err) => {
       console.error(`[gateway] client ws error (player: ${playerId}):`, err);
     });
 
-    proxy.send({ type: 'player_join', matchId, playerId });
+    proxy.send({ type: 'player_join', matchId, playerId, nickname });
 
     ws.on('message', (data) => {
       try {

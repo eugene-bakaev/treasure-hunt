@@ -1,9 +1,14 @@
 import express from 'express';
+import cors from 'cors';
 import http from 'http';
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@apollo/server/express4';
 import type { HealthResponse } from '@treasure-hunt/protocol';
+import { typeDefs } from './graphql/schema.js';
+import { resolvers } from './graphql/resolvers.js';
 
-export function createServer(): http.Server {
+export async function createServer(): Promise<http.Server> {
   const app = express();
 
   const lobbyUrl = process.env['LOBBY_URL'] ?? 'http://localhost:3001';
@@ -14,17 +19,27 @@ export function createServer(): http.Server {
     res.status(200).json(body);
   });
 
-  // Proxy /match requests to the lobby service (preserving the path)
+  // GraphQL endpoint — before catch-all proxy
+  const apollo = new ApolloServer({ typeDefs, resolvers });
+  await apollo.start();
+  app.use(
+    '/graphql',
+    cors<cors.CorsRequest>(),
+    express.json(),
+    expressMiddleware(apollo),
+  );
+
+  // Proxy /match requests to the lobby service
   app.use(
     createProxyMiddleware({
       target: lobbyUrl,
       changeOrigin: true,
       pathFilter: '/match',
       on: {
-        proxyReq: (proxyReq, req, _res) => {
+        proxyReq: (_proxyReq, req) => {
           console.log(`[proxy] -> lobby: ${req.method} ${req.url}`);
         },
-        error: (err, req, res) => {
+        error: (err) => {
           console.error(`[proxy] lobby error: ${err.message}`);
         },
       },
@@ -38,13 +53,12 @@ export function createServer(): http.Server {
       changeOrigin: true,
       ws: true,
       on: {
-        proxyReq: (proxyReq, req, _res) => {
-          // Only log non-static assets to avoid noise
+        proxyReq: (_proxyReq, req) => {
           if (!req.url?.match(/\.(js|css|png|jpg|svg|ico)$/)) {
             console.log(`[proxy] -> web: ${req.method} ${req.url}`);
           }
         },
-        error: (err, req, res) => {
+        error: (err) => {
           console.error(`[proxy] web error: ${err.message}`);
         },
       },

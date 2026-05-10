@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
+import { MockedProvider } from '@apollo/client/testing';
 import App from '../src/App.js';
+import { GetLeaderboardDocument } from '../src/gql/generated/graphql.js';
 
 vi.mock('../src/pixi/PixiCanvas.js', () => ({
   default: () => <div data-testid="pixi-canvas" />,
@@ -23,11 +25,25 @@ vi.mock('../src/state/gameStore.js', () => ({
     sel({ detector: 50, score: 0, matchEnded: false, winnerId: null, playerId: null }),
 }));
 
+const leaderboardMock = {
+  request: {
+    query: GetLeaderboardDocument,
+    variables: { limit: 10 },
+  },
+  result: {
+    data: {
+      leaderboard: [],
+    },
+  },
+};
+
 function renderAt(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <App />
-    </MemoryRouter>,
+    <MockedProvider mocks={[leaderboardMock]}>
+      <MemoryRouter initialEntries={[path]}>
+        <App />
+      </MemoryRouter>
+    </MockedProvider>,
   );
 }
 

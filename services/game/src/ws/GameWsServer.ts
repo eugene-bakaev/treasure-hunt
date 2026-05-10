@@ -1,15 +1,17 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import type { GatewayToGameMsg, GameToGatewayMsg } from '@treasure-hunt/protocol';
-import { GameMatch } from '../match/GameMatch.js';
+import { GameMatch, type MatchResultsCallback } from '../match/GameMatch.js';
 
 export class GameWsServer {
   private readonly port: number;
   private wss: WebSocketServer | null = null;
   private readonly matches = new Map<string, GameMatch>();
+  private readonly onMatchResults: MatchResultsCallback;
 
-  constructor(port: number) {
+  constructor(port: number, onMatchResults: MatchResultsCallback) {
     this.port = port;
+    this.onMatchResults = onMatchResults;
   }
 
   listen(): Promise<void> {
@@ -33,7 +35,12 @@ export class GameWsServer {
   private getOrCreateMatch(matchId: string): GameMatch {
     if (!this.matches.has(matchId)) {
       const seed = uuidv4();
-      const match = new GameMatch(matchId, seed, (msg) => this.broadcast(msg));
+      const match = new GameMatch(
+        matchId,
+        seed,
+        (msg) => this.broadcast(msg),
+        this.onMatchResults,
+      );
       this.matches.set(matchId, match);
     }
     return this.matches.get(matchId)!;
@@ -52,7 +59,7 @@ export class GameWsServer {
 
   private handleMessage(msg: GatewayToGameMsg): void {
     if (msg.type === 'player_join') {
-      this.getOrCreateMatch(msg.matchId).addPlayer(msg.playerId);
+      this.getOrCreateMatch(msg.matchId).addPlayer(msg.playerId, msg.nickname);
     } else if (msg.type === 'player_leave') {
       this.matches.get(msg.matchId)?.removePlayer(msg.playerId);
     } else if (msg.type === 'player_intent') {

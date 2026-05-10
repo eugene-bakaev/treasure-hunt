@@ -12,6 +12,8 @@ export interface PlayerState {
   score: number;
   heldPowerup: 'shovel' | 'compass' | 'bomb' | null;
   fasterShovelTicksRemaining: number;
+  treasuresFound: number;
+  nuggetsFound: number;
 }
 
 export const MOVE_SPEED = 4;   // cells per second

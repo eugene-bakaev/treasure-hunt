@@ -1,28 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { GameToGatewayMsg } from '@treasure-hunt/protocol';
 import { GameMatch, type MatchEventEmitter } from '../../src/match/GameMatch.js';
 
 function makeMatch() {
   const emitted: GameToGatewayMsg[] = [];
   const emit: MatchEventEmitter = (msg) => emitted.push(msg);
-  const match = new GameMatch('test-match', 'fixed-seed', emit);
-  return { match, emitted };
+  const onResults = vi.fn();
+  const match = new GameMatch('test-match', 'fixed-seed', emit, onResults);
+  return { match, emitted, onResults };
 }
 
 function makeTwoPlayerMatch() {
-  const { match, emitted } = makeMatch();
-  match.addPlayer('alice');
-  match.addPlayer('bob');
+  const { match, emitted, onResults } = makeMatch();
+  match.addPlayer('alice', 'Alice');
+  match.addPlayer('bob', 'Bob');
   emitted.length = 0; // clear the two init messages
   match.stop(); // stop the tick loop so we can tick manually
-  return { match, emitted };
+  return { match, emitted, onResults };
 }
 
 describe('GameMatch', () => {
   it('emits player_init to both players when second player joins', () => {
     const { match, emitted } = makeMatch();
-    match.addPlayer('alice');
-    match.addPlayer('bob');
+    match.addPlayer('alice', 'Alice');
+    match.addPlayer('bob', 'Bob');
     const initMsgs = emitted.filter((m) => m.type === 'player_init');
     expect(initMsgs).toHaveLength(2);
     match.stop();

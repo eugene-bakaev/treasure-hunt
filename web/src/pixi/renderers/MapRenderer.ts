@@ -1,4 +1,4 @@
-import { Application, Graphics, Container, Ticker } from 'pixi.js';
+import { Application, Graphics, Container, Ticker, RenderTexture, Sprite } from 'pixi.js';
 import type { PlayerSnapshot, CellType, ItemType, CellChange } from '@treasure-hunt/protocol';
 import type { StoredCompassResult } from '../../state/gameStore.js';
 
@@ -15,6 +15,7 @@ const ITEM_COLORS: Record<Exclude<ItemType, 'treasure'>, number> = {
 };
 
 export class MapRenderer {
+  private app: Application;
   private container: Container;
   private groundContainer: Container;
   private compassContainer: Container;
@@ -22,14 +23,17 @@ export class MapRenderer {
   private compassTime = 0;
   private compassResult: StoredCompassResult | null = null;
   private localPlayer: PlayerSnapshot | undefined = undefined;
-  private mapGfx: Graphics;
+
+  private mapTexture: RenderTexture | null = null;
+  private mapSprite: Sprite | null = null;
+  private tempGfx: Graphics;
 
   constructor(app: Application) {
+    this.app = app;
     this.container = new Container();
     app.stage.addChild(this.container);
 
-    this.mapGfx = new Graphics();
-    this.container.addChild(this.mapGfx);
+    this.tempGfx = new Graphics();
 
     this.groundContainer = new Container();
     app.stage.addChild(this.groundContainer);
@@ -50,22 +54,50 @@ export class MapRenderer {
     height: number,
     cells: Map<string, CellType>,
   ): void {
-    this.mapGfx.clear();
+    if (this.mapSprite) {
+      this.container.removeChild(this.mapSprite);
+      this.mapSprite.destroy();
+      this.mapTexture?.destroy();
+    }
 
+    this.mapTexture = RenderTexture.create({
+      width: width * CELL_SIZE,
+      height: height * CELL_SIZE,
+    });
+    this.mapSprite = new Sprite(this.mapTexture);
+    this.container.addChild(this.mapSprite);
+
+    // Initial draw
+    this.tempGfx.clear();
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const cellType = cells.get(`${x},${y}`) ?? 'rock';
-        this.mapGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+        this.tempGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
           .fill(cellType === 'walkable' ? WALKABLE_COLOR : ROCK_COLOR);
       }
     }
+    this.app.renderer.render({
+      container: this.tempGfx,
+      target: this.mapTexture,
+      clear: true,
+    });
   }
 
   updateCells(changes: CellChange[]): void {
+    if (!this.mapTexture) return;
+
+    this.tempGfx.clear();
     for (const { x, y, cellType } of changes) {
-      this.mapGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+      this.tempGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
         .fill(cellType === 'walkable' ? WALKABLE_COLOR : ROCK_COLOR);
     }
+
+    // Surgical update to the texture
+    this.app.renderer.render({
+      container: this.tempGfx,
+      target: this.mapTexture,
+      clear: false,
+    });
   }
 
   updateGroundItems(items: Array<{ x: number; y: number; item: ItemType }>): void {

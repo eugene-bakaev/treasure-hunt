@@ -1,18 +1,18 @@
 import { useEffect, useCallback } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import PixiCanvas from '../pixi/PixiCanvas.js';
 import DetectorGauge from '../hud/DetectorGauge.js';
 import Scoreboard from '../hud/Scoreboard.js';
 import PowerupSlot from '../hud/PowerupSlot.js';
 import BuffBar from '../hud/BuffBar.js';
+import PostMatch from './PostMatch.js';
 import { useGameStore } from '../state/gameStore.js';
 import { useInput } from '../hooks/useInput.js';
-import { connect, disconnect, sendIntent } from '../net/socket.js';
+import { connect, disconnect, sendIntent, getNickname } from '../net/socket.js';
 import type { Facing } from '@treasure-hunt/protocol';
 
 export default function Match() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const location = useLocation();
 
   const detector = useGameStore((s) => s.detector);
@@ -27,13 +27,6 @@ export default function Match() {
     connect(id!);
     return () => disconnect();
   }, [id]);
-
-  useEffect(() => {
-    if (matchEnded) {
-      const timer = setTimeout(() => navigate('/'), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [matchEnded, navigate]);
 
   const onMove = useCallback(
     (dir: Facing) => sendIntent({ type: 'move', dir }),
@@ -95,7 +88,7 @@ export default function Match() {
     >
       <div style={{ width: '640px' }}>
         <Scoreboard
-          nickname={playerId}
+          nickname={getNickname()}
           score={score}
           matchEnded={matchEnded}
           isWinner={matchEnded && winnerId === playerId}
@@ -116,10 +109,8 @@ export default function Match() {
         <DetectorGauge value={detector} />
       </div>
 
-      {matchEnded && (
-        <p style={{ color: '#aaa', fontSize: '0.9rem' }}>
-          Returning to home in 4 seconds…
-        </p>
+      {matchEnded && id && (
+        <PostMatch matchId={id} winnerId={winnerId} playerId={playerId} />
       )}
     </div>
   );

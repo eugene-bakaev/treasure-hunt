@@ -4,7 +4,7 @@ import { createServer } from '../src/server.js';
 
 describe('gateway server', () => {
   it('GET /health returns service-tagged ok', async () => {
-    const server = createServer();
+    const server = await createServer();
     const res = await request(server).get('/health');
 
     expect(res.status).toBe(200);

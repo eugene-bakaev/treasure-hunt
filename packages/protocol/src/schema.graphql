@@ -1,35 +1,39 @@
 enum LeaderboardSort {
-  SCORE
-  TREASURES
-  NUGGETS
+  TOTAL_SCORE
+  WINS
+  BEST_SCORE
+}
+
+type Query {
+  leaderboard(limit: Int = 20, sortBy: LeaderboardSort = TOTAL_SCORE): [PlayerStats!]!
+  player(nickname: String!): PlayerStats
+  recentMatches(nickname: String, limit: Int = 20): [Match!]!
 }
 
 type PlayerStats {
-  playerId: String!
   nickname: String!
-  totalScore: Int!
-  totalTreasures: Int!
-  totalNuggets: Int!
   matchesPlayed: Int!
-}
-
-type MatchPlayer {
-  playerId: String!
-  nickname: String!
-  score: Int!
-  treasuresFound: Int!
-  nuggetsFound: Int!
+  matchesWon: Int!
+  winRate: Float!
+  totalScore: Int!
+  bestScore: Int!
+  lastPlayedAt: String
+  recentMatches(limit: Int = 5): [Match!]!
 }
 
 type Match {
   id: ID!
-  timestamp: String!
-  durationSeconds: Int!
-  players: [MatchPlayer!]!
+  startedAt: String!
+  endedAt: String!
+  durationSec: Int!
+  winnerNick: String!
+  playerA: MatchPlayer!
+  playerB: MatchPlayer!
+  endReason: String!
 }
 
-type Query {
-  leaderboard(sortBy: LeaderboardSort!, limit: Int!): [PlayerStats!]!
-  playerStats(playerId: String!): PlayerStats
-  matchHistory(playerId: String!, limit: Int!): [Match!]!
+type MatchPlayer {
+  nickname: String!
+  score: Int!
+  won: Boolean!
 }

@@ -6,6 +6,8 @@ import type {
   ServerMessage,
   GameToGatewayMsg,
   ItemType,
+  MatchResultsMsg,
+  MatchPlayerResult,
 } from '@treasure-hunt/protocol';
 import { generateMap } from '../map/MapGenerator.js';
 import type { MapGrid } from '../map/types.js';
@@ -20,6 +22,7 @@ import {
 import { activatePowerup } from './activationSystem.js';
 
 export type MatchEventEmitter = (msg: GameToGatewayMsg) => void;
+export type MatchResultsCallback = (results: MatchResultsMsg) => void;
 
 type PowerupItemType = Exclude<ItemType, 'treasure' | 'nugget'>;
 
@@ -31,24 +34,34 @@ export class GameMatch {
   private readonly matchId: string;
   private readonly map: MapGrid;
   private readonly players = new Map<string, PlayerState>();
+  private readonly nicknames = new Map<string, string>();
   private readonly intentQueues = new Map<string, ClientMessage[]>();
   private readonly buriedItems = new Map<string, ItemType>(); // "x,y" → item
   private readonly groundItems = new Map<string, ItemType>(); // "x,y" → item
   private tick = 0;
+  private startedAt = 0;
   private ended = false;
   private emit: MatchEventEmitter;
+  private onMatchResults: MatchResultsCallback;
   private intervalHandle: ReturnType<typeof setInterval> | null = null;
 
-  constructor(matchId: string, seed: string, emit: MatchEventEmitter) {
+  constructor(
+    matchId: string,
+    seed: string,
+    emit: MatchEventEmitter,
+    onMatchResults: MatchResultsCallback,
+  ) {
     this.matchId = matchId;
     this.map = generateMap(seed);
     this.emit = emit;
+    this.onMatchResults = onMatchResults;
     for (const { x, y, item } of this.map.items) {
       this.buriedItems.set(`${x},${y}`, item);
     }
   }
 
-  addPlayer(playerId: string): void {
+  addPlayer(playerId: string, nickname: string): void {
+    this.nicknames.set(playerId, nickname);
     if (this.players.has(playerId)) {
       this.emitInit(playerId);
       return;
@@ -68,6 +81,8 @@ export class GameMatch {
       score: 0,
       heldPowerup: null,
       fasterShovelTicksRemaining: 0,
+      treasuresFound: 0,
+      nuggetsFound: 0,
     });
     this.intentQueues.set(playerId, []);
 
@@ -114,6 +129,7 @@ export class GameMatch {
 
   start(): void {
     if (this.intervalHandle !== null) return;
+    this.startedAt = Date.now();
     this.intervalHandle = setInterval(() => this.tickOnce(), 1000 / 30);
   }
 
@@ -187,7 +203,11 @@ export class GameMatch {
         if (buried !== undefined) {
           this.buriedItems.delete(buriedKey);
           if (buried === 'treasure') {
-            state = { ...state, score: state.score + 100 };
+            state = {
+              ...state,
+              score: state.score + 100,
+              treasuresFound: state.treasuresFound + 1,
+            };
             events.push({ type: 'pickup', playerId, itemType: 'treasure' });
             events.push({
               type: 'match_end',
@@ -196,7 +216,11 @@ export class GameMatch {
             });
             this.ended = true;
           } else if (buried === 'nugget') {
-            state = { ...state, score: state.score + 10 };
+            state = {
+              ...state,
+              score: state.score + 10,
+              nuggetsFound: state.nuggetsFound + 1,
+            };
             events.push({ type: 'pickup', playerId, itemType: 'nugget' });
           } else if (isPowerup(buried)) {
             // powerup: shovel | compass | bomb
@@ -230,7 +254,11 @@ export class GameMatch {
       const groundItem = this.groundItems.get(groundKey);
       if (groundItem !== undefined) {
         if (groundItem === 'treasure') {
-          state = { ...state, score: state.score + 100 };
+          state = {
+            ...state,
+            score: state.score + 100,
+            treasuresFound: state.treasuresFound + 1,
+          };
           this.groundItems.delete(groundKey);
           events.push({ type: 'pickup', playerId, itemType: 'treasure' });
           events.push({
@@ -240,7 +268,11 @@ export class GameMatch {
           });
           this.ended = true;
         } else if (groundItem === 'nugget') {
-          state = { ...state, score: state.score + 10 };
+          state = {
+            ...state,
+            score: state.score + 10,
+            nuggetsFound: state.nuggetsFound + 1,
+          };
           this.groundItems.delete(groundKey);
           events.push({ type: 'pickup', playerId, itemType: 'nugget' });
         } else if (isPowerup(groundItem) && state.heldPowerup === null) {
@@ -294,6 +326,26 @@ export class GameMatch {
       this.emit({ type: 'player_diff', playerId, diff });
     }
 
-    if (this.ended) this.stop();
+    if (this.ended) {
+      this.stop();
+      this._publishResults();
+    }
+  }
+
+  private _publishResults(): void {
+    const durationSeconds = Math.floor((Date.now() - this.startedAt) / 1000);
+    const players: MatchPlayerResult[] = [...this.players.values()].map((p) => ({
+      playerId: p.id,
+      nickname: this.nicknames.get(p.id) ?? 'Unknown',
+      score: p.score,
+      treasuresFound: p.treasuresFound,
+      nuggetsFound: p.nuggetsFound,
+    }));
+
+    this.onMatchResults({
+      matchId: this.matchId,
+      durationSeconds,
+      players,
+    });
   }
 }

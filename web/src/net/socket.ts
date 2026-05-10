@@ -17,13 +17,21 @@ function getOrCreatePlayerId(): string {
 
 const playerId = getOrCreatePlayerId();
 
+export function getNickname(): string {
+  return localStorage.getItem('treasure_hunt_nickname') ?? `Player_${playerId.slice(0, 4)}`;
+}
+
+export function setNickname(name: string): void {
+  localStorage.setItem('treasure_hunt_nickname', name);
+}
+
 let ws: WebSocket | null = null;
 
 export function connect(matchId: string): void {
   if (ws && ws.readyState !== WebSocket.CLOSED) return;
 
   const socket = new WebSocket(
-    `${WS_BASE}?matchId=${encodeURIComponent(matchId)}&playerId=${playerId}`
+    `${WS_BASE}?matchId=${encodeURIComponent(matchId)}&playerId=${playerId}&nickname=${encodeURIComponent(getNickname())}`
   );
   ws = socket;
 
