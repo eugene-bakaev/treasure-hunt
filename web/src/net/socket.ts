@@ -6,12 +6,25 @@ const WS_BASE: string =
   (import.meta.env as Record<string, string | undefined>)['VITE_WS_URL'] ??
   `${protocol}//${window.location.host}/ws`;
 
+function getOrCreatePlayerId(): string {
+  let id = localStorage.getItem('treasure_hunt_player_id');
+  if (!id) {
+    id = Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('treasure_hunt_player_id', id);
+  }
+  return id;
+}
+
+const playerId = getOrCreatePlayerId();
+
 let ws: WebSocket | null = null;
 
 export function connect(matchId: string): void {
   if (ws && ws.readyState !== WebSocket.CLOSED) return;
 
-  const socket = new WebSocket(`${WS_BASE}?matchId=${encodeURIComponent(matchId)}`);
+  const socket = new WebSocket(
+    `${WS_BASE}?matchId=${encodeURIComponent(matchId)}&playerId=${playerId}`
+  );
   ws = socket;
 
   socket.onmessage = (event: MessageEvent<string>) => {

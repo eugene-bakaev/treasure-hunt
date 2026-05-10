@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type {
   CellType,
+  CellChange,
   ServerMessage,
   PlayerSnapshot,
   ItemType,
@@ -18,6 +19,7 @@ interface GameState {
   mapWidth: number;
   mapHeight: number;
   cells: Map<string, CellType>;   // key = `${x},${y}`
+  lastCellsChanged: CellChange[];
   players: PlayerSnapshot[];
   detector: number;
   score: number;
@@ -39,6 +41,7 @@ export const useGameStore = create<GameState>()(() => ({
   mapWidth: 0,
   mapHeight: 0,
   cells: new Map(),
+  lastCellsChanged: [],
   players: [],
   detector: 0,
   score: 0,
@@ -69,6 +72,7 @@ export function initFromServerMsg(
     mapWidth: msg.mapWidth,
     mapHeight: msg.mapHeight,
     cells,
+    lastCellsChanged: [],
     players: [],
     detector: 0,
     score: 0,
@@ -116,6 +120,7 @@ export function applyDiff(
 
     return {
       cells,
+      lastCellsChanged: diff.cellsChanged,
       players: diff.players,
       detector: diff.detector,
       score,

@@ -1,5 +1,5 @@
 import { Application, Graphics, Container, Ticker } from 'pixi.js';
-import type { PlayerSnapshot, CellType, ItemType } from '@treasure-hunt/protocol';
+import type { PlayerSnapshot, CellType, ItemType, CellChange } from '@treasure-hunt/protocol';
 import type { StoredCompassResult } from '../../state/gameStore.js';
 
 const CELL_SIZE = 16;
@@ -22,11 +22,15 @@ export class MapRenderer {
   private compassTime = 0;
   private compassResult: StoredCompassResult | null = null;
   private localPlayer: PlayerSnapshot | undefined = undefined;
-  private tiles = new Map<string, Graphics>(); // key = `${x},${y}`
+  private mapGfx: Graphics;
 
   constructor(app: Application) {
     this.container = new Container();
     app.stage.addChild(this.container);
+
+    this.mapGfx = new Graphics();
+    this.container.addChild(this.mapGfx);
+
     this.groundContainer = new Container();
     app.stage.addChild(this.groundContainer);
 
@@ -46,29 +50,21 @@ export class MapRenderer {
     height: number,
     cells: Map<string, CellType>,
   ): void {
-    this.container.removeChildren();
-    this.tiles.clear();
+    this.mapGfx.clear();
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const cellType = cells.get(`${x},${y}`) ?? 'rock';
-        const g = this.drawCell(cellType);
-        g.x = x * CELL_SIZE;
-        g.y = y * CELL_SIZE;
-        this.container.addChild(g);
-        this.tiles.set(`${x},${y}`, g);
+        this.mapGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+          .fill(cellType === 'walkable' ? WALKABLE_COLOR : ROCK_COLOR);
       }
     }
   }
 
-  updateCells(cells: Map<string, CellType>): void {
-    for (const [key, cellType] of cells) {
-      const g = this.tiles.get(key);
-      if (g) {
-        g.clear();
-        g.rect(0, 0, CELL_SIZE, CELL_SIZE)
-          .fill(cellType === 'walkable' ? WALKABLE_COLOR : ROCK_COLOR);
-      }
+  updateCells(changes: CellChange[]): void {
+    for (const { x, y, cellType } of changes) {
+      this.mapGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+        .fill(cellType === 'walkable' ? WALKABLE_COLOR : ROCK_COLOR);
     }
   }
 

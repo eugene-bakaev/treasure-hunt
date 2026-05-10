@@ -49,7 +49,12 @@ export class GameMatch {
   }
 
   addPlayer(playerId: string): void {
-    if (this.players.has(playerId) || this.players.size >= 2) return;
+    if (this.players.has(playerId)) {
+      this.emitInit(playerId);
+      return;
+    }
+    if (this.players.size >= 2) return;
+
     const spawn = this.players.size === 0
       ? { x: 2.5, y: 2.5 }
       : { x: 37.5, y: 37.5 };
@@ -71,6 +76,9 @@ export class GameMatch {
         this.emitInit(pid);
       }
       this.start();
+    } else if (this.intervalHandle !== null) {
+      // If match already started (e.g. one player left and another joined)
+      this.emitInit(playerId);
     }
   }
 
@@ -246,26 +254,31 @@ export class GameMatch {
       this.players.set(playerId, state);
     }
 
-    // Pre-compute shared state for broadcasts
+    // Build and emit a state diff for each player
     const buriedPositions = [...this.buriedItems.keys()].map((key) => {
       const [xs, ys] = key.split(',');
       return { x: Number(xs), y: Number(ys) };
     });
 
-    const playersSnapshot: PlayerSnapshot[] = [...this.players.values()].map((p) => ({
-      id: p.id,
-      x: p.x,
-      y: p.y,
-      facing: p.facing,
-      digProgress: p.digTarget !== null ? 1 - p.digTicksRemaining / DIG_TICKS : -1,
-      score: p.score,
-      heldPowerup: p.heldPowerup,
-      buffs: {
-        fasterShovelTicksRemaining: p.fasterShovelTicksRemaining,
-      },
-    }));
+    const playersSnapshot: PlayerSnapshot[] = [...this.players.values()].map((p) => {
+      const baseDuration = p.fasterShovelTicksRemaining > 0
+        ? Math.ceil(DIG_TICKS / 2)
+        : DIG_TICKS;
 
-    // Build and emit a state diff for each player
+      return {
+        id: p.id,
+        x: p.x,
+        y: p.y,
+        facing: p.facing,
+        digProgress: p.digTarget !== null ? 1 - p.digTicksRemaining / baseDuration : -1,
+        score: p.score,
+        heldPowerup: p.heldPowerup,
+        buffs: {
+          fasterShovelTicksRemaining: p.fasterShovelTicksRemaining,
+        },
+      };
+    });
+
     for (const [playerId, player] of this.players) {
       const detector = computeDetector(player, buriedPositions);
 

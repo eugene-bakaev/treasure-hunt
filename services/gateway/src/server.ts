@@ -5,7 +5,6 @@ import type { HealthResponse } from '@treasure-hunt/protocol';
 
 export function createServer(): http.Server {
   const app = express();
-  app.use(express.json());
 
   const lobbyUrl = process.env['LOBBY_URL'] ?? 'http://localhost:3001';
   const webUrl = process.env['WEB_URL'] ?? 'http://localhost:5173';
@@ -15,24 +14,44 @@ export function createServer(): http.Server {
     res.status(200).json(body);
   });
 
-  // Proxy /match requests to the lobby service
+  // Proxy /match requests to the lobby service (preserving the path)
   app.use(
-    '/match',
     createProxyMiddleware({
       target: lobbyUrl,
       changeOrigin: true,
+      pathFilter: '/match',
+      on: {
+        proxyReq: (proxyReq, req, _res) => {
+          console.log(`[proxy] -> lobby: ${req.method} ${req.url}`);
+        },
+        error: (err, req, res) => {
+          console.error(`[proxy] lobby error: ${err.message}`);
+        },
+      },
     }),
   );
 
   // Proxy everything else to the web service
   app.use(
-    '/',
     createProxyMiddleware({
       target: webUrl,
       changeOrigin: true,
-      ws: true, // handle HMR if needed
+      ws: true,
+      on: {
+        proxyReq: (proxyReq, req, _res) => {
+          // Only log non-static assets to avoid noise
+          if (!req.url?.match(/\.(js|css|png|jpg|svg|ico)$/)) {
+            console.log(`[proxy] -> web: ${req.method} ${req.url}`);
+          }
+        },
+        error: (err, req, res) => {
+          console.error(`[proxy] web error: ${err.message}`);
+        },
+      },
     }),
   );
+
+  app.use(express.json());
 
   return http.createServer(app);
 }

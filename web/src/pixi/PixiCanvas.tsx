@@ -77,11 +77,9 @@ export default function PixiCanvas() {
     const unsub = useGameStore.subscribe((state) => {
       playerRendRef.current?.update(state.players);
       // Update only changed cells
-      const changed = new Map<string, CellType>();
-      for (const [k, v] of state.cells) {
-        changed.set(k, v);
+      if (state.lastCellsChanged.length > 0) {
+        mapRendRef.current?.updateCells(state.lastCellsChanged);
       }
-      mapRendRef.current?.updateCells(changed);
       mapRendRef.current?.updateGroundItems(state.groundItems);
 
       const localPlayer = state.players.find((p) => p.id === state.playerId);

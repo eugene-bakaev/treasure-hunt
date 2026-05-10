@@ -34,8 +34,12 @@ export function attachWebSocket(server: http.Server): void {
   wss.on('connection', (ws, req) => {
     const url = new URL(req.url ?? '/', 'ws://x');
     const matchId = url.searchParams.get('matchId') ?? 'dev';
-    const playerId = uuidv4();
+    const playerId = url.searchParams.get('playerId') ?? uuidv4();
     clients.set(playerId, ws);
+
+    ws.on('error', (err) => {
+      console.error(`[gateway] client ws error (player: ${playerId}):`, err);
+    });
 
     proxy.send({ type: 'player_join', matchId, playerId });
 
@@ -43,14 +47,19 @@ export function attachWebSocket(server: http.Server): void {
       try {
         const intent = JSON.parse(data.toString()) as ClientMessage;
         proxy.send({ type: 'player_intent', matchId, playerId, intent });
-      } catch {
-        // ignore malformed
+      } catch (err) {
+        console.error(`[gateway] failed to parse client intent:`, err);
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', (code, reason) => {
+      console.log(`[gateway] client ws closed (player: ${playerId}) code: ${code}`);
       clients.delete(playerId);
       proxy.send({ type: 'player_leave', matchId, playerId });
     });
+  });
+
+  wss.on('error', (err) => {
+    console.error('[gateway] wss error:', err);
   });
 }
