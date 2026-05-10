@@ -4,6 +4,7 @@ import PixiCanvas from '../pixi/PixiCanvas.js';
 import DetectorGauge from '../hud/DetectorGauge.js';
 import Scoreboard from '../hud/Scoreboard.js';
 import PowerupSlot from '../hud/PowerupSlot.js';
+import BuffBar from '../hud/BuffBar.js';
 import { useGameStore } from '../state/gameStore.js';
 import { useInput } from '../hooks/useInput.js';
 import { connect, disconnect, sendIntent } from '../net/socket.js';
@@ -101,11 +102,12 @@ export default function Match() {
         />
       </div>
 
-      <div style={{ width: '640px' }}>
+      <div style={{ width: '640px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <PowerupSlot
           heldPowerup={heldPowerup}
           disabled={heldPowerup === 'shovel' && buffs.fasterShovelTicksRemaining > 0}
         />
+        <BuffBar fasterShovelTicksRemaining={buffs.fasterShovelTicksRemaining} />
       </div>
 
       <PixiCanvas />
