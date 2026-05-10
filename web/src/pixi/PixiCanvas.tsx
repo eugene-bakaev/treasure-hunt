@@ -3,7 +3,7 @@ import { Application } from 'pixi.js';
 import type { CellType } from '@treasure-hunt/protocol';
 import { MapRenderer } from './renderers/MapRenderer.js';
 import { PlayerRenderer } from './renderers/PlayerRenderer.js';
-import { useGameStore } from '../state/gameStore.js';
+import { useGameStore, expireCompassResult } from '../state/gameStore.js';
 
 const CELL_SIZE = 16;
 
@@ -83,8 +83,23 @@ export default function PixiCanvas() {
       }
       mapRendRef.current?.updateCells(changed);
       mapRendRef.current?.updateGroundItems(state.groundItems);
+
+      const localPlayer = state.players.find((p) => p.id === state.playerId);
+      mapRendRef.current?.updateCompassMarker(state.compassResult, localPlayer);
     });
     return unsub;
+  }, []);
+
+
+  // Check for compass result expiry
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const { compassResult } = useGameStore.getState();
+      if (compassResult && compassResult.expiresAtMs <= Date.now()) {
+        expireCompassResult();
+      }
+    }, 100);
+    return () => clearInterval(interval);
   }, []);
 
   return <div ref={containerRef} style={{ lineHeight: 0 }} />;

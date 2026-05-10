@@ -7,8 +7,9 @@ describe('useInput', () => {
     const onMove = vi.fn();
     const onStop = vi.fn();
     const onDig = vi.fn();
+    const onActivate = vi.fn();
 
-    renderHook(() => useInput({ onMove, onStop, onDig }));
+    renderHook(() => useInput({ onMove, onStop, onDig, onActivate }));
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -21,8 +22,9 @@ describe('useInput', () => {
     const onMove = vi.fn();
     const onStop = vi.fn();
     const onDig = vi.fn();
+    const onActivate = vi.fn();
 
-    renderHook(() => useInput({ onMove, onStop, onDig }));
+    renderHook(() => useInput({ onMove, onStop, onDig, onActivate }));
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', bubbles: true }));
@@ -38,8 +40,9 @@ describe('useInput', () => {
     const onMove = vi.fn();
     const onStop = vi.fn();
     const onDig = vi.fn();
+    const onActivate = vi.fn();
 
-    renderHook(() => useInput({ onMove, onStop, onDig }));
+    renderHook(() => useInput({ onMove, onStop, onDig, onActivate }));
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }));

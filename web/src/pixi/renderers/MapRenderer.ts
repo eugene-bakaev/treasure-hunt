@@ -1,5 +1,6 @@
-import { Application, Graphics, Container } from 'pixi.js';
-import type { CellType, ItemType } from '@treasure-hunt/protocol';
+import { Application, Graphics, Container, Ticker } from 'pixi.js';
+import type { PlayerSnapshot, CellType, ItemType } from '@treasure-hunt/protocol';
+import type { StoredCompassResult } from '../../state/gameStore.js';
 
 const CELL_SIZE = 16;
 const ROCK_COLOR = 0x333333;
@@ -16,6 +17,11 @@ const ITEM_COLORS: Record<Exclude<ItemType, 'treasure'>, number> = {
 export class MapRenderer {
   private container: Container;
   private groundContainer: Container;
+  private compassContainer: Container;
+  private compassGfx: Graphics;
+  private compassTime = 0;
+  private compassResult: StoredCompassResult | null = null;
+  private localPlayer: PlayerSnapshot | undefined = undefined;
   private tiles = new Map<string, Graphics>(); // key = `${x},${y}`
 
   constructor(app: Application) {
@@ -23,6 +29,16 @@ export class MapRenderer {
     app.stage.addChild(this.container);
     this.groundContainer = new Container();
     app.stage.addChild(this.groundContainer);
+
+    this.compassContainer = new Container();
+    this.compassGfx = new Graphics();
+    this.compassContainer.addChild(this.compassGfx);
+    app.stage.addChild(this.compassContainer);
+
+    app.ticker.add((ticker: Ticker) => {
+      this.compassTime += ticker.deltaTime * 0.1;
+      this.renderCompass();
+    });
   }
 
   initMap(
@@ -69,6 +85,56 @@ export class MapRenderer {
       g.x = x * CELL_SIZE + (CELL_SIZE - ITEM_SIZE) / 2;
       g.y = y * CELL_SIZE + (CELL_SIZE - ITEM_SIZE) / 2;
       this.groundContainer.addChild(g);
+    }
+  }
+
+
+  updateCompassMarker(result: StoredCompassResult | null, localPlayer?: PlayerSnapshot): void {
+    this.compassResult = result;
+    this.localPlayer = localPlayer;
+    this.renderCompass();
+  }
+
+  private renderCompass(): void {
+    this.compassGfx.clear();
+    if (!this.compassResult) return;
+
+    if (this.compassResult.kind === 'exact') {
+      const pulse = (Math.sin(this.compassTime) + 1) / 2;
+      const radius = 4 + pulse * 4;
+      this.compassGfx.circle(
+        this.compassResult.x * CELL_SIZE + CELL_SIZE / 2,
+        this.compassResult.y * CELL_SIZE + CELL_SIZE / 2,
+        radius
+      ).fill({ color: 0xffffff, alpha: 0.5 + pulse * 0.5 });
+    } else if (this.compassResult.kind === 'direction' && this.localPlayer) {
+      const px = this.localPlayer.x * CELL_SIZE + CELL_SIZE / 2;
+      const py = this.localPlayer.y * CELL_SIZE + CELL_SIZE / 2;
+      const length = 20;
+      const angle = this.compassResult.angleRad;
+
+      this.compassGfx.moveTo(px, py);
+      this.compassGfx.lineTo(px + Math.cos(angle) * length, py + Math.sin(angle) * length);
+      this.compassGfx.stroke({ color: 0xffffff, width: 2 });
+
+      const headSize = 6;
+      this.compassGfx.moveTo(
+        px + Math.cos(angle) * length,
+        py + Math.sin(angle) * length
+      );
+      this.compassGfx.lineTo(
+        px + Math.cos(angle - 0.5) * (length - headSize),
+        py + Math.sin(angle - 0.5) * (length - headSize)
+      );
+      this.compassGfx.moveTo(
+        px + Math.cos(angle) * length,
+        py + Math.sin(angle) * length
+      );
+      this.compassGfx.lineTo(
+        px + Math.cos(angle + 0.5) * (length - headSize),
+        py + Math.sin(angle + 0.5) * (length - headSize)
+      );
+      this.compassGfx.stroke({ color: 0xffffff, width: 2 });
     }
   }
 
