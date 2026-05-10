@@ -170,10 +170,10 @@ export class GameMatch {
           } else if (buried === 'nugget') {
             state = { ...state, score: state.score + 10 };
             events.push({ type: 'pickup', playerId, itemType: 'nugget' });
-          } else {
+          } else if (isPowerup(buried)) {
             // powerup: shovel | compass | bomb
             if (state.heldPowerup === null) {
-              state = { ...state, heldPowerup: buried as PowerupItemType };
+              state = { ...state, heldPowerup: buried };
               events.push({ type: 'pickup', playerId, itemType: buried });
             } else {
               this.groundItems.set(buriedKey, buried);
@@ -197,8 +197,8 @@ export class GameMatch {
           state = { ...state, score: state.score + 10 };
           this.groundItems.delete(groundKey);
           events.push({ type: 'pickup', playerId, itemType: 'nugget' });
-        } else if (state.heldPowerup === null) {
-          state = { ...state, heldPowerup: groundItem as PowerupItemType };
+        } else if (isPowerup(groundItem) && state.heldPowerup === null) {
+          state = { ...state, heldPowerup: groundItem };
           this.groundItems.delete(groundKey);
           events.push({ type: 'pickup', playerId, itemType: groundItem });
         }

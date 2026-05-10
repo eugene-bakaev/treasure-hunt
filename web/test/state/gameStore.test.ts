@@ -118,4 +118,35 @@ describe('gameStore', () => {
     const state = useGameStore.getState();
     expect(state.heldPowerup).toBe('compass');
   });
+
+  it('clears heldPowerup to null when server sends null', () => {
+    initFromServerMsg(initMsg);
+
+    // First diff: set heldPowerup to 'shovel'
+    const diff1: Extract<ServerMessage, { type: 'state_diff' }> = {
+      type: 'state_diff',
+      tick: 5,
+      cellsChanged: [],
+      players: [{ id: 'alice', x: 2.5, y: 2.5, facing: 'E', digProgress: -1, score: 0, heldPowerup: 'shovel' }],
+      detector: 0,
+      events: [],
+      groundItems: [],
+    };
+    applyDiff(diff1, 'alice');
+    expect(useGameStore.getState().heldPowerup).toBe('shovel');
+
+    // Second diff: clear heldPowerup to null
+    const diff2: Extract<ServerMessage, { type: 'state_diff' }> = {
+      type: 'state_diff',
+      tick: 6,
+      cellsChanged: [],
+      players: [{ id: 'alice', x: 2.5, y: 2.5, facing: 'E', digProgress: -1, score: 0, heldPowerup: null }],
+      detector: 0,
+      events: [],
+      groundItems: [],
+    };
+    applyDiff(diff2, 'alice');
+
+    expect(useGameStore.getState().heldPowerup).toBeNull();
+  });
 });

@@ -79,7 +79,7 @@ export function applyDiff(
     let winnerId = prev.winnerId;
     const myPlayer = diff.players.find((p: PlayerSnapshot) => p.id === myPlayerId);
     const score = myPlayer?.score ?? prev.score;
-    const heldPowerup = myPlayer?.heldPowerup ?? prev.heldPowerup;
+    const heldPowerup = myPlayer ? myPlayer.heldPowerup : prev.heldPowerup;
 
     for (const event of diff.events) {
       if (event.type === 'match_end') {
