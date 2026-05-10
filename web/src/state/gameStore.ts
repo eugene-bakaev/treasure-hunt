@@ -18,7 +18,7 @@ interface GameState {
   matchEnded: boolean;
   winnerId: string | null;
   groundItems: Array<{ x: number; y: number; item: ItemType }>;
-  heldPowerup: 'shovel' | 'compass' | 'bomb' | null;
+  heldPowerup: PlayerSnapshot['heldPowerup'];
 }
 
 export const useGameStore = create<GameState>()(() => ({
@@ -95,7 +95,7 @@ export function applyDiff(
       score,
       matchEnded,
       winnerId,
-      groundItems: diff.groundItems,
+      groundItems: diff.groundItems ?? prev.groundItems,
       heldPowerup,
     };
   });
