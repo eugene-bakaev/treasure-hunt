@@ -45,9 +45,9 @@ export type CompassResult =
 export type MatchEvent =
   | { type: 'match_end'; winnerId: string; scores: Record<string, number> }
   | { type: 'pickup'; playerId: string; itemType: ItemType }
-  | { type: 'powerup_activate'; playerId: string; itemType: PowerupType }
+  | { type: 'powerup_activate'; playerId: string; powerup: PowerupType }
   | { type: 'compass_result'; playerId: string; result: CompassResult }
-  | { type: 'bomb_detonate'; x: number; y: number; playerId: string };
+  | { type: 'bomb_detonate'; playerId: string; cells: Array<{ x: number; y: number }> };
 
 export type ServerMessage =
   | {
