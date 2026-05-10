@@ -73,7 +73,7 @@ export type ServerMessage =
 // --- Internal: Gateway → Game Server ---
 
 export type GatewayToGameMsg =
-  | { type: 'player_join'; matchId: string; playerId: string }
+  | { type: 'player_join'; matchId: string; playerId: string; nickname: string }
   | { type: 'player_leave'; matchId: string; playerId: string }
   | { type: 'player_intent'; matchId: string; playerId: string; intent: ClientMessage };
 
@@ -90,3 +90,17 @@ export type GameToGatewayMsg =
       playerId: string;
       diff: Extract<ServerMessage, { type: 'state_diff' }>;
     };
+
+export interface MatchPlayerResult {
+  playerId: string;
+  nickname: string;
+  score: number;
+  treasuresFound: number;
+  nuggetsFound: number;
+}
+
+export interface MatchResultsMsg {
+  matchId: string;
+  durationSeconds: number;
+  players: MatchPlayerResult[];
+}

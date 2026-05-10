@@ -13,4 +13,6 @@ export type {
   ServerMessage,
   GatewayToGameMsg,
   GameToGatewayMsg,
+  MatchPlayerResult,
+  MatchResultsMsg,
 } from './messages.js';
