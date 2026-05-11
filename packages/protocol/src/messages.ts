@@ -101,6 +101,12 @@ export interface MatchPlayerResult {
 
 export interface MatchResultsMsg {
   matchId: string;
-  durationSeconds: number;
-  players: MatchPlayerResult[];
+  startedAt: string; // ISO
+  endedAt: string;   // ISO
+  durationSec: number;
+  mapSeed: string;
+  winnerId: string | null;
+  playerA: MatchPlayerResult;
+  playerB: MatchPlayerResult;
+  endReason: string;
 }

@@ -1,35 +1,29 @@
 import amqp from 'amqplib';
 import type { Pool } from 'pg';
+import { persistMatch } from './db/queries.js';
 import type { MatchResultsMsg } from '@treasure-hunt/protocol';
-import { upsertMatchResults } from './db/queries.js';
+
+const QUEUE = 'match.results';
 
 export async function startConsumer(rabbitmqUrl: string, pool: Pool) {
   try {
     const connection = await amqp.connect(rabbitmqUrl);
     const channel = await connection.createChannel();
 
-    const exchange = 'match.results';
-    const queue = 'stats.match.results';
+    await channel.assertQueue(QUEUE, { durable: true });
+    channel.prefetch(1);
 
-    await channel.assertExchange(exchange, 'fanout', { durable: true });
-    await channel.assertQueue(queue, { durable: true });
-    await channel.bindQueue(queue, exchange, '');
+    console.log(`[stats] Waiting for messages in ${QUEUE}`);
 
-    console.log(`[stats] Waiting for messages in ${queue}`);
-
-    channel.consume(queue, async (msg) => {
+    channel.consume(QUEUE, async (msg) => {
       if (msg !== null) {
         try {
-          const results: MatchResultsMsg = JSON.parse(msg.content.toString());
+          const results = JSON.parse(msg.content.toString()) as MatchResultsMsg;
           console.log(`[stats] Received results for match ${results.matchId}`);
-          
-          await upsertMatchResults(pool, results);
-          
+          await persistMatch(pool, results);
           channel.ack(msg);
         } catch (err) {
-          console.error('[stats] Error processing message:', err);
-          // Nack the message if processing fails, but don't requeue to avoid infinite loops on malformed messages.
-          // In production, the queue should be configured with a Dead Letter Exchange.
+          console.error('[stats] error processing results:', err);
           channel.nack(msg, false, false);
         }
       }

@@ -33,6 +33,7 @@ function isPowerup(item: ItemType): item is PowerupItemType {
 export class GameMatch {
   private readonly matchId: string;
   private readonly map: MapGrid;
+  private readonly seed: string;
   private readonly players = new Map<string, PlayerState>();
   private readonly nicknames = new Map<string, string>();
   private readonly intentQueues = new Map<string, ClientMessage[]>();
@@ -41,6 +42,8 @@ export class GameMatch {
   private tick = 0;
   private startedAt = 0;
   private ended = false;
+  private winnerId: string | null = null;
+  private endReason = 'Unknown';
   private emit: MatchEventEmitter;
   private onMatchResults: MatchResultsCallback;
   private intervalHandle: ReturnType<typeof setInterval> | null = null;
@@ -52,6 +55,7 @@ export class GameMatch {
     onMatchResults: MatchResultsCallback,
   ) {
     this.matchId = matchId;
+    this.seed = seed;
     this.map = generateMap(seed);
     this.emit = emit;
     this.onMatchResults = onMatchResults;
@@ -61,43 +65,53 @@ export class GameMatch {
   }
 
   addPlayer(playerId: string, nickname: string): void {
+    console.log(`[game] addPlayer: ${nickname} (${playerId}). Current size: ${this.players.size}. Interval: ${this.intervalHandle !== null}`);
     this.nicknames.set(playerId, nickname);
-    if (this.players.has(playerId)) {
-      this.emitInit(playerId);
-      return;
+    
+    if (!this.players.has(playerId)) {
+      if (this.players.size >= 2) {
+        console.log(`[game] match full, ignoring ${playerId}`);
+        return;
+      }
+
+      const spawn = this.players.size === 0
+        ? { x: 2.5, y: 2.5 }
+        : { x: 37.5, y: 37.5 };
+      this.players.set(playerId, {
+        id: playerId,
+        ...spawn,
+        facing: 'E',
+        moveDir: null,
+        digTarget: null,
+        digTicksRemaining: 0,
+        score: 0,
+        heldPowerup: null,
+        fasterShovelTicksRemaining: 0,
+        treasuresFound: 0,
+        nuggetsFound: 0,
+      });
+      this.intentQueues.set(playerId, []);
+      console.log(`[game] added new player ${playerId}. New size: ${this.players.size}`);
+    } else {
+      console.log(`[game] player ${playerId} already exists in match.`);
     }
-    if (this.players.size >= 2) return;
 
-    const spawn = this.players.size === 0
-      ? { x: 2.5, y: 2.5 }
-      : { x: 37.5, y: 37.5 };
-    this.players.set(playerId, {
-      id: playerId,
-      ...spawn,
-      facing: 'E',
-      moveDir: null,
-      digTarget: null,
-      digTicksRemaining: 0,
-      score: 0,
-      heldPowerup: null,
-      fasterShovelTicksRemaining: 0,
-      treasuresFound: 0,
-      nuggetsFound: 0,
-    });
-    this.intentQueues.set(playerId, []);
-
-    if (this.players.size === 2) {
+    if (this.players.size === 2 && this.intervalHandle === null) {
+      console.log(`[game] match starting: ${this.matchId}`);
       for (const [pid] of this.players) {
         this.emitInit(pid);
       }
       this.start();
     } else if (this.intervalHandle !== null) {
-      // If match already started (e.g. one player left and another joined)
+      console.log(`[game] match already running, init joining/re-joining player: ${playerId}`);
       this.emitInit(playerId);
+    } else {
+      console.log(`[game] waiting for second player. Not sending init to ${playerId}`);
     }
   }
 
   private emitInit(playerId: string): void {
+    console.log(`[game] emitInit to player: ${playerId}`);
     const player = this.players.get(playerId)!;
     const walkableCells: Array<{ x: number; y: number }> = [];
     for (let y = 0; y < this.map.height; y++) {
@@ -215,6 +229,8 @@ export class GameMatch {
               scores: { [playerId]: state.score },
             });
             this.ended = true;
+            this.winnerId = playerId;
+            this.endReason = 'Treasure Found';
           } else if (buried === 'nugget') {
             state = {
               ...state,
@@ -267,6 +283,8 @@ export class GameMatch {
             scores: { [playerId]: state.score },
           });
           this.ended = true;
+          this.winnerId = playerId;
+          this.endReason = 'Treasure Found';
         } else if (groundItem === 'nugget') {
           state = {
             ...state,
@@ -333,8 +351,9 @@ export class GameMatch {
   }
 
   private _publishResults(): void {
-    const durationSeconds = Math.floor((Date.now() - this.startedAt) / 1000);
-    const players: MatchPlayerResult[] = [...this.players.values()].map((p) => ({
+    const endedAt = Date.now();
+    const durationSec = Math.floor((endedAt - this.startedAt) / 1000);
+    const playerArray = Array.from(this.players.values()).map((p) => ({
       playerId: p.id,
       nickname: this.nicknames.get(p.id) ?? 'Unknown',
       score: p.score,
@@ -342,10 +361,18 @@ export class GameMatch {
       nuggetsFound: p.nuggetsFound,
     }));
 
+    if (playerArray.length < 2) return;
+
     this.onMatchResults({
       matchId: this.matchId,
-      durationSeconds,
-      players,
+      startedAt: new Date(this.startedAt).toISOString(),
+      endedAt: new Date(endedAt).toISOString(),
+      durationSec,
+      mapSeed: this.seed,
+      winnerId: this.winnerId,
+      playerA: playerArray[0]!,
+      playerB: playerArray[1]!,
+      endReason: this.endReason,
     });
   }
 }

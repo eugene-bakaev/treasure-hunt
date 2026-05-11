@@ -51,7 +51,7 @@ export async function createServer(): Promise<http.Server> {
     createProxyMiddleware({
       target: webUrl,
       changeOrigin: true,
-      ws: true,
+      ws: false, // Internal handler handles /ws
       on: {
         proxyReq: (_proxyReq, req) => {
           if (!req.url?.match(/\.(js|css|png|jpg|svg|ico)$/)) {

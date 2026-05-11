@@ -1,4 +1,4 @@
-import { Application, Graphics, Container, Ticker, RenderTexture, Sprite } from 'pixi.js';
+import { Application, Graphics, Container, Ticker } from 'pixi.js';
 import type { PlayerSnapshot, CellType, ItemType, CellChange } from '@treasure-hunt/protocol';
 import type { StoredCompassResult } from '../../state/gameStore.js';
 
@@ -15,7 +15,6 @@ const ITEM_COLORS: Record<Exclude<ItemType, 'treasure'>, number> = {
 };
 
 export class MapRenderer {
-  private app: Application;
   private container: Container;
   private groundContainer: Container;
   private compassContainer: Container;
@@ -24,16 +23,18 @@ export class MapRenderer {
   private compassResult: StoredCompassResult | null = null;
   private localPlayer: PlayerSnapshot | undefined = undefined;
 
-  private mapTexture: RenderTexture | null = null;
-  private mapSprite: Sprite | null = null;
-  private tempGfx: Graphics;
+  // Use separate layers to avoid fill color bleeding in v8
+  private rocksGfx: Graphics;
+  private walkableGfx: Graphics;
 
   constructor(app: Application) {
-    this.app = app;
     this.container = new Container();
     app.stage.addChild(this.container);
 
-    this.tempGfx = new Graphics();
+    this.rocksGfx = new Graphics();
+    this.walkableGfx = new Graphics();
+    this.container.addChild(this.rocksGfx);
+    this.container.addChild(this.walkableGfx);
 
     this.groundContainer = new Container();
     app.stage.addChild(this.groundContainer);
@@ -54,50 +55,41 @@ export class MapRenderer {
     height: number,
     cells: Map<string, CellType>,
   ): void {
-    if (this.mapSprite) {
-      this.container.removeChild(this.mapSprite);
-      this.mapSprite.destroy();
-      this.mapTexture?.destroy();
-    }
+    this.rocksGfx.clear();
+    this.walkableGfx.clear();
 
-    this.mapTexture = RenderTexture.create({
-      width: width * CELL_SIZE,
-      height: height * CELL_SIZE,
-    });
-    this.mapSprite = new Sprite(this.mapTexture);
-    this.container.addChild(this.mapSprite);
+    // 1. Draw rocks background
+    this.rocksGfx.rect(0, 0, width * CELL_SIZE, height * CELL_SIZE).fill(ROCK_COLOR);
 
-    // Initial draw
-    this.tempGfx.clear();
+    // 2. Draw all initial walkable paths
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const cellType = cells.get(`${x},${y}`) ?? 'rock';
-        this.tempGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-          .fill(cellType === 'walkable' ? WALKABLE_COLOR : ROCK_COLOR);
+        if (cellType === 'walkable') {
+          this.walkableGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        }
       }
     }
-    this.app.renderer.render({
-      container: this.tempGfx,
-      target: this.mapTexture,
-      clear: true,
-    });
+    this.walkableGfx.fill(WALKABLE_COLOR);
   }
 
   updateCells(changes: CellChange[]): void {
-    if (!this.mapTexture) return;
+    const walkable = changes.filter(c => c.cellType === 'walkable');
+    const rocks = changes.filter(c => c.cellType === 'rock');
 
-    this.tempGfx.clear();
-    for (const { x, y, cellType } of changes) {
-      this.tempGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-        .fill(cellType === 'walkable' ? WALKABLE_COLOR : ROCK_COLOR);
+    if (rocks.length > 0) {
+      for (const { x, y } of rocks) {
+        this.rocksGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      }
+      this.rocksGfx.fill(ROCK_COLOR);
     }
 
-    // Surgical update to the texture
-    this.app.renderer.render({
-      container: this.tempGfx,
-      target: this.mapTexture,
-      clear: false,
-    });
+    if (walkable.length > 0) {
+      for (const { x, y } of walkable) {
+        this.walkableGfx.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      }
+      this.walkableGfx.fill(WALKABLE_COLOR);
+    }
   }
 
   updateGroundItems(items: Array<{ x: number; y: number; item: ItemType }>): void {
@@ -164,12 +156,5 @@ export class MapRenderer {
       );
       this.compassGfx.stroke({ color: 0xffffff, width: 2 });
     }
-  }
-
-  private drawCell(cellType: CellType): Graphics {
-    const g = new Graphics();
-    g.rect(0, 0, CELL_SIZE, CELL_SIZE)
-      .fill(cellType === 'walkable' ? WALKABLE_COLOR : ROCK_COLOR);
-    return g;
   }
 }

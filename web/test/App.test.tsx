@@ -13,6 +13,8 @@ vi.mock('../src/net/socket.js', () => ({
   connect: (_matchId: string) => {},
   disconnect: () => {},
   sendIntent: () => {},
+  getNickname: () => 'TestPlayer',
+  setNickname: (_name: string) => {},
 }));
 
 vi.mock('../src/net/lobby.js', () => ({

@@ -6,7 +6,7 @@ import { startConsumer } from './consumer.js';
 const { Pool } = pg;
 
 const port = Number(process.env.PORT ?? 3003);
-const postgresUrl = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/stats';
+const postgresUrl = process.env.POSTGRES_URL ?? 'postgresql://treasure:treasure@localhost:5432/treasure';
 const rabbitmqUrl = process.env.RABBITMQ_URL ?? 'amqp://localhost';
 
 const pool = new Pool({

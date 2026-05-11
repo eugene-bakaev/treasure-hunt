@@ -29,7 +29,7 @@ const mocks = [
 describe('Leaderboard', () => {
   it('renders loading state initially', () => {
     render(
-      <MockedProvider mocks={[]}>
+      <MockedProvider mocks={mocks} addTypename={false}>
         <Leaderboard />
       </MockedProvider>
     );

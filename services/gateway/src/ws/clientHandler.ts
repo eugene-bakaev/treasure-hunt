@@ -17,7 +17,10 @@ export function attachWebSocket(server: http.Server): void {
     if (msg.type === 'player_init') {
       const ws = clients.get(msg.playerId);
       if (ws?.readyState === WebSocket.OPEN) {
+        console.log(`[gateway] routing player_init to client (player: ${msg.playerId})`);
         ws.send(JSON.stringify(msg.init));
+      } else {
+        console.warn(`[gateway] dropped player_init: client not found or closed (player: ${msg.playerId})`);
       }
     } else if (msg.type === 'player_diff') {
       const ws = clients.get(msg.playerId);
@@ -55,8 +58,14 @@ export function attachWebSocket(server: http.Server): void {
 
     ws.on('close', (code, reason) => {
       console.log(`[gateway] client ws closed (player: ${playerId}) code: ${code}`);
-      clients.delete(playerId);
-      proxy.send({ type: 'player_leave', matchId, playerId });
+      // Only delete and send leave if the socket being closed is the active one
+      if (clients.get(playerId) === ws) {
+        console.log(`[gateway] cleaning up active session (player: ${playerId})`);
+        clients.delete(playerId);
+        proxy.send({ type: 'player_leave', matchId, playerId });
+      } else {
+        console.log(`[gateway] ignoring close for stale socket (player: ${playerId})`);
+      }
     });
   });
 

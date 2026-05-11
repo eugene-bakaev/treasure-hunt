@@ -5,24 +5,37 @@ export async function migrate(pool: Pool) {
   try {
     await client.query('BEGIN');
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS matches (
-        id TEXT PRIMARY KEY,
-        duration_seconds INTEGER NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    // Force schema update for Phase 3 dev
+    await client.query('DROP TABLE IF EXISTS player_stats');
+    await client.query('DROP TABLE IF EXISTS matches');
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS matches (
+        id uuid PRIMARY KEY,
+        started_at timestamptz NOT NULL,
+        ended_at timestamptz NOT NULL,
+        duration_sec int NOT NULL,
+        map_seed text NOT NULL,
+        winner_nick text NOT NULL,
+        player_a_nick text NOT NULL,
+        player_a_score int NOT NULL,
+        player_b_nick text NOT NULL,
+        player_b_score int NOT NULL,
+        end_reason text NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_matches_ended_at ON matches (ended_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_matches_winner ON matches (winner_nick);
+      CREATE INDEX IF NOT EXISTS idx_matches_player_a ON matches (player_a_nick);
+      CREATE INDEX IF NOT EXISTS idx_matches_player_b ON matches (player_b_nick);
+
       CREATE TABLE IF NOT EXISTS player_stats (
-        match_id TEXT REFERENCES matches(id),
-        player_id TEXT NOT NULL,
-        nickname TEXT NOT NULL,
-        score INTEGER NOT NULL,
-        treasures_found INTEGER NOT NULL,
-        nuggets_found INTEGER NOT NULL,
-        PRIMARY KEY (match_id, player_id)
-      )
+        nickname text PRIMARY KEY,
+        matches_played int NOT NULL DEFAULT 0,
+        matches_won int NOT NULL DEFAULT 0,
+        total_score bigint NOT NULL DEFAULT 0,
+        best_score int NOT NULL DEFAULT 0,
+        last_played_at timestamptz
+      );
     `);
 
     await client.query('COMMIT');

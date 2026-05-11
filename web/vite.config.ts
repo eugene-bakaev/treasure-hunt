@@ -13,6 +13,7 @@ export default defineConfig({
         target: 'ws://gateway:3000',
         ws: true,
       },
+      '/graphql': 'http://gateway:3000',
     },
   },
   preview: {
@@ -25,6 +26,7 @@ export default defineConfig({
         target: 'ws://gateway:3000',
         ws: true,
       },
+      '/graphql': 'http://gateway:3000',
     },
   },
   test: {

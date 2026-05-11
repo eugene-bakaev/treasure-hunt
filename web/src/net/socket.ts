@@ -7,10 +7,10 @@ const WS_BASE: string =
   `${protocol}//${window.location.host}/ws`;
 
 function getOrCreatePlayerId(): string {
-  let id = localStorage.getItem('treasure_hunt_player_id');
+  let id = sessionStorage.getItem('treasure_hunt_player_id');
   if (!id) {
     id = Math.random().toString(36).substring(2, 15);
-    localStorage.setItem('treasure_hunt_player_id', id);
+    sessionStorage.setItem('treasure_hunt_player_id', id);
   }
   return id;
 }
@@ -26,9 +26,17 @@ export function setNickname(name: string): void {
 }
 
 let ws: WebSocket | null = null;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let intentionalDisconnect = false;
 
 export function connect(matchId: string): void {
+  intentionalDisconnect = false;
   if (ws && ws.readyState !== WebSocket.CLOSED) return;
+
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
 
   const socket = new WebSocket(
     `${WS_BASE}?matchId=${encodeURIComponent(matchId)}&playerId=${playerId}&nickname=${encodeURIComponent(getNickname())}`
@@ -38,12 +46,12 @@ export function connect(matchId: string): void {
   socket.onmessage = (event: MessageEvent<string>) => {
     try {
       const msg = JSON.parse(event.data) as ServerMessage;
-      const { playerId } = useGameStore.getState();
+      const { playerId: currentId } = useGameStore.getState();
 
       if (msg.type === 'init') {
         initFromServerMsg(msg);
-      } else if (msg.type === 'state_diff' && playerId) {
-        applyDiff(msg, playerId);
+      } else if (msg.type === 'state_diff' && currentId) {
+        applyDiff(msg, currentId);
       }
     } catch {
       // ignore malformed
@@ -56,6 +64,13 @@ export function connect(matchId: string): void {
 
   socket.onclose = () => {
     if (ws === socket) ws = null;
+    
+    // Auto-reconnect if it was not an intentional disconnect
+    if (!intentionalDisconnect) {
+      console.log(`[socket] websocket closed unexpectedly, reconnecting in 1s...`);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(() => connect(matchId), 1000);
+    }
   };
 }
 
@@ -66,6 +81,11 @@ export function sendIntent(intent: ClientMessage): void {
 }
 
 export function disconnect(): void {
+  intentionalDisconnect = true;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   ws?.close();
   ws = null;
   useGameStore.setState({ playerId: null, matchId: null });
