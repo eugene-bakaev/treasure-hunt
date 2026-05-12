@@ -1,6 +1,6 @@
 import express, { type Express } from 'express';
 import type { HealthResponse } from '@treasure-hunt/protocol';
-import { createMatch, resolveJoinCode } from './store.js';
+import { createMatch, resolveJoinCode, listPublicMatches, incrementPlayerCount, getMatch } from './store.js';
 
 export function createServer(): Express {
   const app = express();
@@ -20,9 +20,34 @@ export function createServer(): Express {
     res.status(200).json(body);
   });
 
-  app.post('/match', (_req, res) => {
-    const record = createMatch();
+  app.post('/match', (req, res) => {
+    const isPublic = req.body?.isPublic === true;
+    const record = createMatch(isPublic);
     res.status(201).json({ matchId: record.matchId, joinCode: record.joinCode });
+  });
+
+  app.get('/matches', (_req, res) => {
+    const matches = listPublicMatches();
+    res.status(200).json(matches);
+  });
+
+  app.get('/match/:matchId', (req, res) => {
+    const record = getMatch(req.params['matchId'] ?? '');
+    if (!record) {
+      res.status(404).json({ error: 'Match not found' });
+      return;
+    }
+    res.status(200).json(record);
+  });
+
+  app.post('/match/:matchId/join', (req, res) => {
+    const matchId = req.params['matchId'] ?? '';
+    const success = incrementPlayerCount(matchId);
+    if (!success) {
+      res.status(400).json({ error: 'Failed to join match' });
+      return;
+    }
+    res.sendStatus(204);
   });
 
   app.get('/match/join/:joinCode', (req, res) => {

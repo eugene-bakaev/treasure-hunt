@@ -19,7 +19,8 @@ vi.mock('../src/net/socket.js', () => ({
 
 vi.mock('../src/net/lobby.js', () => ({
   createMatch: vi.fn().mockResolvedValue({ matchId: 'match-123', joinCode: 'ABC123' }),
-  joinMatch: vi.fn().mockResolvedValue({ matchId: 'match-456' }),
+  joinMatchByCode: vi.fn().mockResolvedValue({ matchId: 'match-456' }),
+  fetchPublicMatches: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../src/state/gameStore.js', () => ({

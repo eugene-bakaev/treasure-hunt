@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { joinMatch } from '../net/lobby.js';
+import { joinMatchByCode } from '../net/lobby.js';
 
 export default function Join() {
   const { joinCode } = useParams<{ joinCode: string }>();
@@ -10,7 +10,7 @@ export default function Join() {
   useEffect(() => {
     if (!joinCode) return;
     let mounted = true;
-    joinMatch(joinCode)
+    joinMatchByCode(joinCode)
       .then(({ matchId }) => { if (mounted) navigate(`/match/${matchId}`); })
       .catch(() => { if (mounted) setError('Invalid or expired invite link.'); });
     return () => { mounted = false; };

@@ -29,12 +29,12 @@ export async function createServer(): Promise<http.Server> {
     expressMiddleware(apollo),
   );
 
-  // Proxy /match requests to the lobby service
+  // Proxy /match and /matches requests to the lobby service
   app.use(
     createProxyMiddleware({
       target: lobbyUrl,
       changeOrigin: true,
-      pathFilter: '/match',
+      pathFilter: ['/match', '/matches'],
       on: {
         proxyReq: (_proxyReq, req) => {
           console.log(`[proxy] -> lobby: ${req.method} ${req.url}`);

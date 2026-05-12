@@ -10,7 +10,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 });
 
 vi.mock('../../src/net/lobby.js', () => ({
-  joinMatch: vi.fn().mockResolvedValue({ matchId: 'match-456' }),
+  joinMatchByCode: vi.fn().mockResolvedValue({ matchId: 'match-456' }),
 }));
 
 beforeEach(() => mockNavigate.mockClear());
@@ -39,8 +39,8 @@ describe('Join screen', () => {
   });
 
   it('shows error for invalid join code', async () => {
-    const { joinMatch } = await import('../../src/net/lobby.js');
-    vi.mocked(joinMatch).mockRejectedValueOnce(new Error('Invalid'));
+    const { joinMatchByCode } = await import('../../src/net/lobby.js');
+    vi.mocked(joinMatchByCode).mockRejectedValueOnce(new Error('Invalid'));
     renderJoin('XXXXXX');
     await waitFor(() => {
       expect(screen.getByText(/invalid/i)).toBeInTheDocument();

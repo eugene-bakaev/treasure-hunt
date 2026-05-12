@@ -7,6 +7,7 @@ import { GetLeaderboardDocument } from '../../src/gql/generated/graphql.js';
 
 vi.mock('../../src/net/lobby.js', () => ({
   createMatch: vi.fn().mockResolvedValue({ matchId: 'match-123', joinCode: 'ABC123' }),
+  fetchPublicMatches: vi.fn().mockResolvedValue([]),
 }));
 
 const mockNavigate = vi.fn();
@@ -28,7 +29,7 @@ const leaderboardMock = {
 };
 
 describe('Home screen', () => {
-  it('renders Create Match button', () => {
+  it('renders Public and Private match buttons', () => {
     render(
       <MockedProvider mocks={[leaderboardMock]}>
         <MemoryRouter>
@@ -36,7 +37,8 @@ describe('Home screen', () => {
         </MemoryRouter>
       </MockedProvider>
     );
-    expect(screen.getByRole('button', { name: /create match/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create public match/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create private match/i })).toBeInTheDocument();
   });
 
   it('navigates to /match/:id with joinCode state on click', async () => {
@@ -51,7 +53,7 @@ describe('Home screen', () => {
     const input = screen.getByPlaceholderText(/enter nickname/i);
     fireEvent.change(input, { target: { value: 'TestPlayer' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /create match/i }));
+    fireEvent.click(screen.getByRole('button', { name: /create public match/i }));
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith(
         '/match/match-123',

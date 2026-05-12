@@ -17,7 +17,7 @@ export default function Home() {
     persistNickname(nickname);
   }, [nickname]);
 
-  async function handleCreate() {
+  async function handleCreate(isPublic = false) {
     if (!nickname.trim()) {
       setError('Please enter a nickname first.');
       return;
@@ -25,7 +25,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-      const { matchId, joinCode } = await createMatch();
+      const { matchId, joinCode } = await createMatch(isPublic);
       navigate(`/match/${matchId}`, { state: { joinCode } });
     } catch {
       setError('Failed to create match. Please try again.');
@@ -58,25 +58,61 @@ export default function Home() {
         />
       </div>
 
-      <button
-        onClick={() => { void handleCreate(); }}
-        disabled={loading}
-        style={{
-          marginTop: '1.5rem',
-          padding: '0.75rem 2rem',
-          fontSize: '1.1rem',
-          cursor: loading ? 'default' : 'pointer',
-          background: '#ffd700',
-          border: 'none',
-          borderRadius: '6px',
-          fontWeight: 'bold',
-          opacity: loading ? 0.6 : 1,
-          width: '100%',
-          maxWidth: '300px',
-        }}
-      >
-        {loading ? 'Creating…' : 'Create Match'}
-      </button>
+      <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '300px' }}>
+        <button
+          onClick={() => { void handleCreate(true); }}
+          disabled={loading}
+          style={{
+            padding: '0.75rem 2rem',
+            fontSize: '1.1rem',
+            cursor: loading ? 'default' : 'pointer',
+            background: '#ffd700',
+            border: 'none',
+            borderRadius: '6px',
+            fontWeight: 'bold',
+            opacity: loading ? 0.6 : 1,
+            width: '100%',
+          }}
+        >
+          {loading ? 'Creating…' : 'Create Public Match'}
+        </button>
+
+        <button
+          onClick={() => { void handleCreate(false); }}
+          disabled={loading}
+          style={{
+            padding: '0.75rem 2rem',
+            fontSize: '1.1rem',
+            cursor: loading ? 'default' : 'pointer',
+            background: '#444',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            fontWeight: 'bold',
+            opacity: loading ? 0.6 : 1,
+            width: '100%',
+          }}
+        >
+          {loading ? 'Creating…' : 'Create Private Match'}
+        </button>
+
+        <button
+          onClick={() => navigate('/lobby')}
+          style={{
+            padding: '0.75rem 2rem',
+            fontSize: '1.1rem',
+            cursor: 'pointer',
+            background: 'transparent',
+            color: '#ffd700',
+            border: '1px solid #ffd700',
+            borderRadius: '6px',
+            fontWeight: 'bold',
+            width: '100%',
+          }}
+        >
+          Browse Lobby
+        </button>
+      </div>
       
       {error && (
         <p style={{ color: '#f88', marginTop: '0.75rem', fontSize: '0.9rem' }}>
